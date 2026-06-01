@@ -78,11 +78,26 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
 ## CURRENT STATUS (update this as you go)
 - [x] Discovery + architecture brainstorming (done in chat).
 - [x] Implementation plan written: `docs/superpowers/plans/2026-05-31-agentic-scheduler.md`.
-- [ ] **NEXT ACTION:** Execute **inline, with teaching**. Start **Task 1** (project skeleton +
-  git init + deps + `.gitignore` protecting the API key). Then Tasks 2–10 = Floor 1.
+- [x] **FLOOR 1 COMPLETE** (Tasks 1–10). Working CLI demo, 25 tests passing. The whole
+  assignment is satisfied offline/deterministically — no API key needed yet.
+  - Core: time, JsonScheduleStore, candidateGenerator (hard constraints), scorer
+    (5 weighted factors, explainable), ScheduleReasoningAgent (rank top-3 + bestEffort),
+    RuleBasedIntentExtractor (chrono + keywords = offline brain), SchedulingAssistant
+    (deterministic orchestrator), CLI (`src/cli/index.ts`).
+  - Demo: `npm run cli -- "Can I come in next Thursday after 3?" --ref=2026-05-31`
+    and `npm run cli -- "my tooth is killing me, anything today" --ref=2026-06-04`.
+  - `--ref=YYYY-MM-DD` pins the reference date; use `2026-05-31` so "next Thursday" = 6/4
+    (where the seed calendar has data). chrono reads "next Thu" as NEXT week's Thursday.
+- [ ] **NEXT ACTION:** Start **Floor 2 — Task 11** (Zod intent schema + validation), then
+  Task 12 (LLM extractor + cost tracking, needs API key), Task 13 (tiered/offline fallback),
+  Task 14 (3 demo scenarios as tests). Continue **inline, with teaching**.
 - Execution mode chosen: **inline together** (NOT subagent-driven — Scott must see/own every step).
-- Git: local repo NOT yet initialized (Task 1 does `git init` + connects remote
-  `https://github.com/srfinch17/planetdds-workflowoptimizer.git`).
+- Git: local repo initialized on `main`, remote connected to
+  `https://github.com/srfinch17/planetdds-workflowoptimizer.git`. Commits NOT pushed yet
+  (pushing needs Scott's GitHub auth — ask before pushing). Latest commit = Floor 1 complete.
+- Known simplification (note for defense): candidateGenerator does NOT yet filter provider
+  role/specialty vs appointment type, so a hygienist (Dr. Jones) can surface for an
+  "emergency". Easy future hard-constraint; out of scope for Floor 1. Flag it honestly if asked.
 
 ## Environment notes
 - Dev on Scott's PC (this machine, most tools present). Node v26.1.0, npm 11.7.0 confirmed.
