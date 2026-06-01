@@ -95,3 +95,11 @@ export interface ScoredSlot {
   factors: ScoreFactor[];
   explanation: string; // plain-English, built from the matched factors
 }
+
+// The reasoning agent's answer: the top-N ranked slots, plus an honesty flag.
+export interface Recommendation {
+  slots: ScoredSlot[];
+  // true when NO slot fully satisfied the requested time window — we returned
+  // the closest-scoring slots anyway rather than nothing. Keeps the demo honest.
+  bestEffort: boolean;
+}
