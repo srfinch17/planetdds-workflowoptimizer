@@ -149,8 +149,8 @@
   color: var(--ink-soft);
 }
 .banner--error {
-  background: #fdecea;
-  border-color: #f3c2bd;
+  background: var(--bad-soft);
+  border-color: var(--bad-soft-border);
   color: var(--bad);
 }
 .banner-inline {
@@ -170,7 +170,7 @@
 }
 .chip {
   font-size: 13px;
-  background: #eef2f8;
+  background: var(--soft);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 4px 11px;
@@ -185,8 +185,8 @@
   color: var(--brand);
 }
 .chip--bad {
-  background: #fdecea;
-  border-color: #f3c2bd;
+  background: var(--bad-soft);
+  border-color: var(--bad-soft-border);
   color: var(--bad);
 }
 
@@ -194,19 +194,19 @@
   font-size: 12px;
   border-radius: 999px;
   padding: 3px 9px;
-  background: #eef2f8;
+  background: var(--soft);
   color: var(--ink-soft);
   border: 1px solid var(--line);
 }
 .pill--good {
   background: var(--good-bg);
   color: var(--good);
-  border-color: #c6e7d4;
+  border-color: var(--good-soft-border);
 }
 .pill--brand {
-  background: #e7effd;
+  background: var(--brand-soft);
   color: var(--brand);
-  border-color: #c5dbfb;
+  border-color: var(--brand-soft-border);
 }
 
 /* ---------- intake view ---------- */
@@ -317,7 +317,7 @@
   font-size: 20px;
   font-weight: 750;
   color: var(--brand);
-  background: #e7effd;
+  background: var(--brand-soft);
   border-radius: 8px;
   padding: 2px 12px;
 }
@@ -386,7 +386,7 @@
   box-shadow: var(--shadow);
 }
 .escalation--emergency {
-  background: #fdecea;
+  background: var(--bad-soft);
   border-color: var(--bad);
 }
 .escalation--callback {
@@ -449,11 +449,11 @@
 }
 .cb-item--emergency {
   border-left-color: var(--bad);
-  background: #fdf5f4;
+  background: var(--bad-soft);
 }
 .cb-item--callback {
   border-left-color: var(--warn);
-  background: #fdfaf3;
+  background: var(--warn-bg);
 }
 .cb-item__head {
   display: flex;
@@ -471,12 +471,12 @@
 .pill--warn {
   background: var(--warn-bg);
   color: var(--warn);
-  border-color: #e9d8b0;
+  border-color: var(--warn-soft-border);
 }
 .pill--bad {
-  background: #fdecea;
+  background: var(--bad-soft);
   color: var(--bad);
-  border-color: #f3c2bd;
+  border-color: var(--bad-soft-border);
 }
 
 /* ---------- log panel ---------- */
@@ -490,10 +490,10 @@
 }
 .btn--danger {
   color: var(--bad);
-  border-color: #f3c2bd;
+  border-color: var(--bad-soft-border);
 }
 .btn--danger:hover {
-  background: #fdecea;
+  background: var(--bad-soft);
 }
 
 .logpanel {
@@ -525,7 +525,7 @@
   gap: 4px;
   height: 90px;
   padding: 6px 4px 0;
-  background: #f7fafe;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow-x: auto;
@@ -561,9 +561,9 @@
   flex-wrap: wrap;
 }
 .chip--active {
-  background: #e7effd;
+  background: var(--brand-soft);
   color: var(--brand);
-  border-color: #c5dbfb;
+  border-color: var(--brand-soft-border);
 }
 
 .replay-result {
@@ -589,7 +589,7 @@
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
-  border-bottom: 1px solid #eef2f8;
+  border-bottom: 1px solid var(--soft);
   font-size: 12.5px;
 }
 .log-time {
@@ -673,7 +673,7 @@
 .cal-corner {
   grid-column: 1;
   grid-row: 1;
-  background: #f7fafe;
+  background: var(--panel);
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
@@ -684,7 +684,7 @@
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  background: #f7fafe;
+  background: var(--panel);
   border-bottom: 1px solid var(--line);
   border-left: 1px solid var(--line);
 }
@@ -703,7 +703,7 @@
 }
 .cal-cell {
   border-left: 1px solid var(--line);
-  border-bottom: 1px dashed #eef2f8;
+  border-bottom: 1px dashed var(--soft);
 }
 
 .cal-block {
@@ -718,12 +718,12 @@
   justify-content: center;
 }
 .cal-block--closed {
-  background: repeating-linear-gradient(45deg, #f1f4f9, #f1f4f9 6px, #e9eef5 6px, #e9eef5 12px);
+  background: repeating-linear-gradient(45deg, var(--hatch-1), var(--hatch-1) 6px, var(--hatch-2) 6px, var(--hatch-2) 12px);
   margin: 0;
   border-radius: 0;
 }
 .cal-block--off {
-  background: repeating-linear-gradient(45deg, #eef1f6, #eef1f6 7px, #e4e9f1 7px, #e4e9f1 14px);
+  background: repeating-linear-gradient(45deg, var(--hatch-off-1), var(--hatch-off-1) 7px, var(--hatch-off-2) 7px, var(--hatch-off-2) 14px);
   color: var(--ink-soft);
   align-items: center;
   font-weight: 600;
@@ -731,22 +731,22 @@
   border-radius: 0;
 }
 .cal-block--rule {
-  background: #eceff4;
+  background: var(--rule-bg);
   color: var(--ink-soft);
-  border: 1px solid #dde3ec;
+  border: 1px solid var(--rule-border);
   font-style: italic;
 }
 .cal-block--appt {
-  background: #dbe7fb;
-  color: #173a6b;
-  border: 1px solid #bdd2f5;
+  background: var(--appt-bg);
+  color: var(--appt-ink);
+  border: 1px solid var(--appt-border);
 }
 .cal-block--appt strong {
   font-weight: 700;
   text-transform: capitalize;
 }
 .cal-block--appt small {
-  color: #3a5e93;
+  color: var(--appt-ink-soft);
 }
 .cal-block--hl {
   background: var(--good-bg);
@@ -807,7 +807,7 @@
 }
 .donut-track {
   fill: none;
-  stroke: #eef2f8;
+  stroke: var(--soft);
   stroke-width: 12;
 }
 .donut-value {
@@ -856,7 +856,7 @@
   color: var(--ink-soft);
 }
 .util-bar {
-  background: #eef2f8;
+  background: var(--soft);
   border-radius: 999px;
   height: 12px;
   overflow: hidden;
@@ -906,8 +906,47 @@
 .rule-applied code {
   font-size: 12px;
   color: var(--ink-soft);
-  background: #f7fafe;
+  background: var(--panel);
   border: 1px solid var(--line);
   padding: 4px 8px;
   word-break: break-all;
+}
+
+/* ---------- theme toggle (header) ---------- */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 6px 2px 9px;
+  background: var(--surface);
+}
+.theme-toggle__icon {
+  font-size: 12px;
+  line-height: 1;
+}
+.theme-toggle select {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 0;
+  cursor: pointer;
+}
+.theme-toggle select:focus {
+  outline: none;
+}
+
+/* legend swatches that mirror the calendar block colors in both themes */
+.legend-swatch--appt {
+  background: var(--appt-bg);
+  border: 1px solid var(--appt-border);
+}
+.legend-swatch--rule {
+  background: var(--rule-bg);
+  border: 1px solid var(--rule-border);
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import { Intake } from './views/Intake'
 import { Admin } from './views/Admin'
+import { ThemeToggle } from './components/ThemeToggle'
 
 type Tab = 'intake' | 'admin'
 
@@ -24,6 +25,7 @@ function App() {
           </div>
           <div className="app-header__spacer" />
           <div className="app-header__mode">agentic · explainable · cost-aware</div>
+          <ThemeToggle />
         </div>
         <nav className="tabs">
           <button

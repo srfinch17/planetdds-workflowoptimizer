@@ -1,4 +1,6 @@
-/* Base reset + design tokens. One clinical palette, used everywhere. */
+/* Base reset + design tokens. Light is the default; [data-theme="dark"] on
+   <html> overrides the palette. Every surface/color in the app resolves to one
+   of these variables, so the two themes stay in lockstep. */
 :root {
   --bg: #f4f7fb;
   --surface: #ffffff;
@@ -9,15 +11,70 @@
   --brand-dark: #1857c0;
   --good: #1f9d63;
   --good-bg: #e7f5ee;
+  --good-soft-border: #c6e7d4;
   --warn: #c47d12;
   --warn-bg: #fbf1de;
+  --warn-soft-border: #e9d8b0;
   --bad: #c2392f;
+  --bad-soft: #fdecea;
+  --bad-soft-border: #f3c2bd;
+  --soft: #eef2f8;
+  --brand-soft: #e7effd;
+  --brand-soft-border: #c5dbfb;
+  --panel: #f7fafe;
+  --rule-bg: #eceff4;
+  --rule-border: #dde3ec;
+  --appt-bg: #dbe7fb;
+  --appt-border: #bdd2f5;
+  --appt-ink: #173a6b;
+  --appt-ink-soft: #3a5e93;
+  --hatch-1: #f1f4f9;
+  --hatch-2: #e9eef5;
+  --hatch-off-1: #eef1f6;
+  --hatch-off-2: #e4e9f1;
   --shadow: 0 1px 2px rgba(16, 30, 54, 0.06), 0 4px 16px rgba(16, 30, 54, 0.06);
   --radius: 10px;
+  color-scheme: light;
+
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   color: var(--ink);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e131a;
+  --surface: #19212c;
+  --ink: #e7edf5;
+  --ink-soft: #94a3b5;
+  --line: #2a3543;
+  --brand: #5b9bff;
+  --brand-dark: #4385f0;
+  --good: #4fcf92;
+  --good-bg: #163127;
+  --good-soft-border: #2a5740;
+  --warn: #e3a948;
+  --warn-bg: #362c17;
+  --warn-soft-border: #5a4a24;
+  --bad: #f07a6d;
+  --bad-soft: #3a201d;
+  --bad-soft-border: #5c302b;
+  --soft: #222c39;
+  --brand-soft: #1c2f4d;
+  --brand-soft-border: #2f4d78;
+  --panel: #141b25;
+  --rule-bg: #232c39;
+  --rule-border: #313d4c;
+  --appt-bg: #1d3457;
+  --appt-border: #315185;
+  --appt-ink: #bcd3f5;
+  --appt-ink-soft: #8cafdc;
+  --hatch-1: #1a222e;
+  --hatch-2: #151c26;
+  --hatch-off-1: #1d2630;
+  --hatch-off-2: #161e27;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
 }
 
 * {
@@ -32,6 +89,23 @@ body {
   color: var(--ink);
 }
 
+/* Smooth, modest cross-fade when the theme flips. */
+body,
+.card,
+.app-header,
+.calendar,
+.cal-head,
+.cal-corner,
+.btn,
+.chip,
+.pill,
+.theme-toggle,
+input,
+select,
+textarea {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease;
+}
+
 #root {
   min-height: 100vh;
 }
@@ -39,6 +113,14 @@ body {
 button {
   font: inherit;
   cursor: pointer;
+}
+
+/* Form controls follow the theme (and color-scheme themes their popups/arrows). */
+input,
+select,
+textarea {
+  color: var(--ink);
+  background: var(--surface);
 }
 
 h1,
@@ -56,7 +138,7 @@ p {
 code {
   font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
   font-size: 0.9em;
-  background: #eef2f8;
+  background: var(--soft);
   padding: 1px 5px;
   border-radius: 4px;
 }

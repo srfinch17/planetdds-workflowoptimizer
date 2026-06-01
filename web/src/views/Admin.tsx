@@ -62,11 +62,11 @@ export function Admin() {
         </button>
         <div className="calendar-legend">
           <span>
-            <span className="legend-swatch" style={{ background: '#dbe7fb', border: '1px solid #bdd2f5' }} />
+            <span className="legend-swatch legend-swatch--appt" />
             booked
           </span>
           <span>
-            <span className="legend-swatch" style={{ background: '#eceff4', border: '1px solid #dde3ec' }} />
+            <span className="legend-swatch legend-swatch--rule" />
             blocked (lunch / off)
           </span>
         </div>
