@@ -32,10 +32,10 @@ export function scoreSlot(
 
   const score = Math.round(factors.reduce((sum, f) => sum + f.contribution, 0));
 
-  // Highlights = factors that satisfied a REAL constraint (neutral details
-  // start with "No ", so we drop those from the human explanation).
+  // Highlights = factors that satisfied a REAL constraint. Neutral factors
+  // ("any time works") still score but are dropped from the human explanation.
   const highlights = factors
-    .filter((f) => f.matched && f.contribution > 0 && !f.detail.startsWith("No "))
+    .filter((f) => f.matched && f.contribution > 0 && !f.neutral)
     .map((f) => f.detail);
 
   const explanation =
@@ -50,7 +50,7 @@ function timeWindowFactor(slot: CandidateSlot, intent: SchedulingIntent): ScoreF
   const mins = minutesOfDay(slot.start);
   const hasConstraint = Boolean(intent.timeEarliest || intent.timeLatest || intent.partOfDay);
   if (!hasConstraint) {
-    return factor("time_window_match", weight, true, weight, "No specific time requested");
+    return factor("time_window_match", weight, true, weight, "Any time of day works", true);
   }
   let ok = true;
   if (intent.timeEarliest && mins < minutesFromHHmm(intent.timeEarliest)) ok = false;
@@ -70,7 +70,7 @@ function timeWindowFactor(slot: CandidateSlot, intent: SchedulingIntent): ScoreF
 function datePreferenceFactor(slot: CandidateSlot, intent: SchedulingIntent): ScoreFactor {
   const weight = 20;
   if (intent.daysOfWeek.length === 0) {
-    return factor("date_preference", weight, true, weight, "No specific day requested");
+    return factor("date_preference", weight, true, weight, "Any day works", true);
   }
   const wd = weekdayOf(slot.start);
   const ok = intent.daysOfWeek.includes(wd);
@@ -100,7 +100,7 @@ function preferredProviderFactor(
 ): ScoreFactor {
   const weight = 15;
   if (!intent.preferredProviderId) {
-    return factor("preferred_provider", weight, true, weight, "No provider preference");
+    return factor("preferred_provider", weight, true, weight, "Any available dentist works", true);
   }
   const ok = slot.providerId === intent.preferredProviderId;
   const name = providerName(slot.providerId, store);
@@ -114,7 +114,7 @@ function equipmentFactor(slot: CandidateSlot, store: ScheduleStore): ScoreFactor
   const weight = 5;
   const needsXray = slot.type === "extraction" || slot.type === "emergency";
   if (!needsXray) {
-    return factor("operatory_equipment", weight, true, weight, "No special equipment needed");
+    return factor("operatory_equipment", weight, true, weight, "Standard room is fine", true);
   }
   const op = store.getOperatories().find((o) => o.id === slot.operatoryId);
   const ok = Boolean(op?.equipment.includes("xray"));
@@ -130,10 +130,11 @@ function factor(
   matched: boolean,
   contribution: number,
   detail: string,
+  neutral = false,
 ): ScoreFactor {
   // Round to whole points so the score is exactly the sum of the points shown —
   // and so no slot ever displays "+4.999999999999".
-  return { name, weight, matched, contribution: Math.round(contribution), detail };
+  return { name, weight, matched, contribution: Math.round(contribution), detail, neutral };
 }
 
 function minutesOfDay(iso: string): number {

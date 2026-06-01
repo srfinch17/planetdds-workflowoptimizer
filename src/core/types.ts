@@ -86,6 +86,10 @@ export interface ScoreFactor {
   matched: boolean;
   detail: string; // human-readable reason
   contribution: number; // points this factor added to the score
+  // true when this factor was satisfied only because the patient expressed NO
+  // constraint on it (e.g. "any time works"). Such factors still score, but are
+  // kept out of the headline explanation so it highlights real matches.
+  neutral?: boolean;
 }
 
 // A ranked recommendation: a slot + why it ranked where it did.
