@@ -1,0 +1,90 @@
+# PlanetDDS Agentic Scheduler — Project Memory
+
+> **This file auto-loads when working in this repo. It is the single source of truth for
+> resuming work.** The granular, task-by-task build steps live in the implementation plan:
+> `docs/superpowers/plans/2026-05-31-agentic-scheduler.md` — read it for code-level detail.
+
+## What this is (and why it matters)
+
+A **final-round interview take-home** for **Planet DDS** (dental SaaS). Scott is a TypeScript
+and Anthropic-API beginner who must build this AND present/defend it live in front of 4–8
+engineers + execs. **He needs to understand every piece cold — never optimize for speed over
+his understanding.** Teach as you build.
+
+- **Presentation:** Thursday **2026-06-04, 11:00 AM**.
+- **Build runway:** Sun May 31 eve + all Mon Jun 1 + all Tue Jun 2 (day). **Tue night = laptop
+  setup + practice (HARD STOP on building).** Wed = drive Phoenix→ + practice to his son.
+- **Assignment chosen:** Assignment **2** of 2 in `Interview Agentic Assignment.docx` —
+  *"Intelligent Agentic Workflow Optimizer"* (appointment scheduling). **Assignment 1
+  (claim-scrubbing RCM) is explicitly OUT of scope** — they said pick one; he picked #2.
+
+## The task (verbatim requirements)
+
+Turn an unstructured patient request ("Can I come in next Thursday after 3?") into the **top-3
+ranked, explainable appointment slots**. Must: accept unstructured requests; use an LLM/NLP
+agent to extract intent/constraints/preferences (date, time window, urgency); coordinate with a
+schedule-reasoning agent over a **mock JSON schedule**; apply scoring to rank top 3; return
+**clear explainable** recommendations. Outcome must show it reduces manual effort, improves
+speed/accuracy, and produces **consistent, explainable** decisions. Mock data = CSV/JSON.
+
+## Architecture (locked)
+
+**Orchestrator–workers pattern** (cite Anthropic's "Building Effective Agents"):
+- **Scheduling Assistant** = deterministic orchestrator (workflow, fixed path — NOT an LLM,
+  because control flow never branches).
+- **Intent Agent** = LLM-backed (cheap Haiku) with a **deterministic rule-based fallback**.
+- **Schedule-Reasoning Agent** = fully deterministic constraint eval + weighted scoring.
+- Mock data is JSON behind a **`ScheduleStore` interface** (future = Google Calendar/EHR drop-in).
+- A **Hono backend** holds the API key (NEVER in the browser); **React/Vite** frontend.
+
+### Three goals, one design
+1. **Cost-conscious:** LLM called only when the rule parser can't resolve the request. Dashboard
+   shows % handled free + est. cost/1000 requests. Model = Claude Haiku + prompt caching.
+2. **Self-trained "skills":** precise vocabulary matters — hard constraints = **structured data**
+   enforced deterministically; the LLM only *translates* an admin's English sentence into a rule.
+   A real Anthropic **Agent Skill** (dental-triage) is reserved for **fuzzy clinical judgment**,
+   NOT hard rules. Do not blur this in the demo — an engineer will catch it.
+3. **Offline mode:** the rule-based parser IS the offline path (graceful degradation, built into
+   the foundation via the Tiered extractor). `chrono-node` does deterministic date parsing.
+
+## Defense cheat-sheet (the questions the panel will ask)
+- **"What makes it agentic vs a script?"** Two agents reason over ambiguity; orchestration is a
+  workflow because steps are fixed — reserving autonomy for where it's needed is a deliberate call.
+- **"How is it consistent?"** Ranking is deterministic code → identical output for identical input.
+- **"Cost?"** Haiku + prompt caching + only-when-needed; metrics visible on the dashboard.
+- **"API down?"** Rule-based parser is the offline fallback.
+- **"Trust the LLM?"** Every LLM response validated against a Zod schema; failure → fallback.
+- **"Explainable?"** Explanations generated FROM the scoring factors → always faithful.
+
+## Tech stack
+TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `chrono-node`,
+`dotenv`, Hono (backend), React + Vite (frontend). `.env` holds `ANTHROPIC_API_KEY` and is
+**gitignored from commit #1**. Scott bought $20 of API credits (far more than needed).
+
+## Build floors (each leaves a complete, demoable system)
+- **0–1:** skeleton + git + CLI core (request→intent→candidates→ranked top-3+explanation).
+  **Floor 1 alone fully satisfies the assignment.**
+- **2:** Zod validation, tiered/offline intent, 3 rehearsed demo scenarios.
+- **3:** Hono backend + React UI + live calendar.
+- **4:** admin dashboard (cost/efficiency + utilization metrics).
+- **5:** plain-English rule-teaching + dental-triage Agent Skill.
+
+## Demo scenarios (rehearse these 3)
+1. Happy path: "Can I come in next Thursday after 3?" → clean Thu ≥15:00 match.
+2. Ambiguity: "sometime next week, mornings are better but I'm flexible" → LLM resolves.
+3. Urgent/no-match: "my tooth is killing me, anything today" when full → triage urgent,
+   best-effort closest slots, explanation states it couldn't do better. (This is the showstopper.)
+
+## CURRENT STATUS (update this as you go)
+- [x] Discovery + architecture brainstorming (done in chat).
+- [x] Implementation plan written: `docs/superpowers/plans/2026-05-31-agentic-scheduler.md`.
+- [ ] **NEXT ACTION:** Execute **inline, with teaching**. Start **Task 1** (project skeleton +
+  git init + deps + `.gitignore` protecting the API key). Then Tasks 2–10 = Floor 1.
+- Execution mode chosen: **inline together** (NOT subagent-driven — Scott must see/own every step).
+- Git: local repo NOT yet initialized (Task 1 does `git init` + connects remote
+  `https://github.com/srfinch17/planetdds-workflowoptimizer.git`).
+
+## Environment notes
+- Dev on Scott's PC (this machine, most tools present). Node v26.1.0, npm 11.7.0 confirmed.
+- Demo on a **pristine Windows 11 laptop** — will need Node + Git + VS Code installed Tue night,
+  then `git clone`, `npm install`, create `.env` manually. **Do a full cold-start dry run Tue night.**

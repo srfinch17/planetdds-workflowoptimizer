@@ -1,0 +1,16 @@
+# Dependencies — regenerated from package.json via `npm install`
+node_modules/
+web/node_modules/
+
+# Build output
+dist/
+web/dist/
+
+# Secrets — NEVER commit. Contains ANTHROPIC_API_KEY.
+.env
+.env.local
+
+# Logs / OS cruft
+*.log
+.DS_Store
+Thumbs.db
