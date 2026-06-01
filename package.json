@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "cli": "tsx src/cli/index.ts",
+    "scenarios": "tsx src/cli/scenarios.ts",
     "server": "tsx src/server/index.ts",
     "test": "vitest run",
     "test:watch": "vitest"

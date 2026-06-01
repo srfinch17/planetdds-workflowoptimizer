@@ -88,13 +88,22 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
     and `npm run cli -- "my tooth is killing me, anything today" --ref=2026-06-04`.
   - `--ref=YYYY-MM-DD` pins the reference date; use `2026-05-31` so "next Thursday" = 6/4
     (where the seed calendar has data). chrono reads "next Thu" as NEXT week's Thursday.
-- [ ] **NEXT ACTION:** Start **Floor 2 — Task 11** (Zod intent schema + validation), then
-  Task 12 (LLM extractor + cost tracking, needs API key), Task 13 (tiered/offline fallback),
-  Task 14 (3 demo scenarios as tests). Continue **inline, with teaching**.
+- [x] **FLOOR 2 COMPLETE** (Tasks 11–14). 49 tests passing.
+  - Zod `parseIntent` (untrusted-input boundary), `LlmIntentExtractor` (DI'd `LlmClient`,
+    prompt caching, throws `LlmExtractionError` on bad output), `CostTracker` (USD meter),
+    `TieredIntentExtractor` (rules-first → LLM escalation → offline/failure fallback, records
+    `lastPath` + `pathCounts`), and 3 canonical demo scenarios (`npm run scenarios`).
+  - **Money slide:** `npm run scenarios` runs offline (no key) → "3 requests served, 0 API
+    calls, $0.000000". All three stories (happy / ambiguous-mornings / urgent-best-effort) work.
+  - LLM path is built + unit-tested with a FAKE client, but a REAL live API call has NOT been
+    made yet (no key in dev env). **Tue night: set `.env` ANTHROPIC_API_KEY and run
+    `npm run scenarios` with a genuinely ambiguous request to confirm the live `llm` path.**
+- [ ] **NEXT ACTION:** Start **Floor 3 — Task 15** (Hono backend API), then Task 16 (Vite/React
+  scaffold), 17 (intake view), 18 (live calendar). Continue **inline, with teaching**.
 - Execution mode chosen: **inline together** (NOT subagent-driven — Scott must see/own every step).
 - Git: local repo initialized on `main`, remote connected to
   `https://github.com/srfinch17/planetdds-workflowoptimizer.git`. Commits NOT pushed yet
-  (pushing needs Scott's GitHub auth — ask before pushing). Latest commit = Floor 1 complete.
+  (pushing needs Scott's GitHub auth — ask before pushing). Latest commit = Floor 2 complete.
 - Known simplification (note for defense): candidateGenerator does NOT yet filter provider
   role/specialty vs appointment type, so a hygienist (Dr. Jones) can surface for an
   "emergency". Easy future hard-constraint; out of scope for Floor 1. Flag it honestly if asked.
