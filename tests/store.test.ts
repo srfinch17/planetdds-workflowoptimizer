@@ -26,16 +26,19 @@ describe("JsonScheduleStore", () => {
   it("loads seed data", () => {
     expect(store.getProviders()).toHaveLength(3);
     expect(store.getOperatories()).toHaveLength(3);
-    expect(store.getAppointments()).toHaveLength(2);
+    const appts = store.getAppointments();
+    expect(appts.length).toBeGreaterThanOrEqual(2); // 2 demo seeds + a year of mock data
+    expect(appts.find((a) => a.id === "appt-001")).toBeTruthy();
     expect(store.getRules()).toHaveLength(2);
     expect(store.getProviders()[0]!.name).toBe("Dr. Smith");
   });
 
   it("book() appends an appointment, returns it with a generated id, and persists", () => {
+    const before = store.getAppointments().length;
     const slot: CandidateSlot = {
       providerId: "prov-jones",
       operatoryId: "op-3",
-      start: "2026-06-04T10:00:00",
+      start: "2026-06-04T10:00:00", // a protected demo day → this slot is free
       end: "2026-06-04T10:30:00",
       type: "cleaning",
     };
@@ -44,11 +47,11 @@ describe("JsonScheduleStore", () => {
     expect(appt.id).toBeTruthy();
     expect(appt.patientId).toBe("pat-doe");
     expect(appt.providerId).toBe("prov-jones");
-    expect(store.getAppointments()).toHaveLength(3);
+    expect(store.getAppointments()).toHaveLength(before + 1);
 
     // persisted to disk?
     const onDisk = JSON.parse(readFileSync(join(tempDir, "appointments.json"), "utf-8"));
-    expect(onDisk).toHaveLength(3);
+    expect(onDisk).toHaveLength(before + 1);
   });
 
   it("addRule() appends and persists a rule", () => {

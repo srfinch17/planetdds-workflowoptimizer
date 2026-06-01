@@ -1,7 +1,7 @@
 [
   { "type": "cleaning", "durationMin": 30, "defaultUrgency": "routine" },
   { "type": "checkup", "durationMin": 30, "defaultUrgency": "routine" },
-  { "type": "filling", "durationMin": 45, "defaultUrgency": "soon" },
-  { "type": "extraction", "durationMin": 60, "defaultUrgency": "soon" },
-  { "type": "emergency", "durationMin": 45, "defaultUrgency": "urgent" }
+  { "type": "filling", "durationMin": 60, "defaultUrgency": "soon" },
+  { "type": "extraction", "durationMin": 90, "defaultUrgency": "soon" },
+  { "type": "emergency", "durationMin": 60, "defaultUrgency": "urgent" }
 ]

@@ -42,7 +42,8 @@ describe("generateCandidates (hard constraints)", () => {
       intent({ appointmentType: "checkup", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
       store,
     );
-    const appts = store.getAppointments();
+    // Only same-day appointments can overlap a candidate (cross-date can't).
+    const appts = store.getAppointments().filter((a) => a.start.slice(0, 10) === "2026-06-04");
     for (const c of got) {
       for (const a of appts) {
         const sharesResource = a.providerId === c.providerId || a.operatoryId === c.operatoryId;

@@ -1,4 +1,4 @@
-import type { CandidateSlot, SchedulingIntent, Weekday } from "../types";
+import type { Appointment, CandidateSlot, SchedulingIntent, Weekday } from "../types";
 import type { ScheduleStore } from "../store/ScheduleStore";
 import { addMinutes, overlaps, toIso, weekdayOf, withinHours } from "../time";
 
@@ -31,13 +31,23 @@ export function generateCandidates(
   const dates = datesInRange(startDate, endDate);
   const allowedWeekdays = new Set(intent.daysOfWeek);
 
-  const appts = store.getAppointments();
+  // Index appointments by day: only the same day's appointments can conflict
+  // with a slot, so this turns an O(allAppointments) scan per slot into O(few).
+  // With ~a year of seeded data this is the difference between snappy and slow.
+  const apptsByDate = new Map<string, Appointment[]>();
+  for (const a of store.getAppointments()) {
+    const key = a.start.slice(0, 10);
+    const list = apptsByDate.get(key);
+    if (list) list.push(a);
+    else apptsByDate.set(key, [a]);
+  }
   const rules = store.getRules();
   const candidates: CandidateSlot[] = [];
 
   for (const date of dates) {
     const wd = weekdayOf(`${date}T00:00:00`);
     if (allowedWeekdays.size > 0 && !allowedWeekdays.has(wd)) continue;
+    const appts = apptsByDate.get(date) ?? [];
 
     for (const provider of store.getProviders()) {
       // Hard: provider must work this weekday.
