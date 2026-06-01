@@ -109,9 +109,21 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
     never rewrites seed JSON (every demo cold-start is identical). Installed `@hono/node-server`.
   - Run: `npm run server` (boots OFFLINE with no key — rules path, $0). Smoke-tested live:
     Thu 6/4 3 PM, pathTaken=rules, apiCalls=0.
-- [ ] **NEXT ACTION:** **Task 16** (Vite + React scaffold in `web/`, dev proxy `/api` →
-  localhost:3000, Intake + Admin tabs), then 17 (intake view), 18 (live calendar) → Floor 3 done.
-  Continue **inline, with teaching**.
+- [x] **FLOOR 3 — Tasks 16 + 17 COMPLETE.** React app in `web/` (Vite 8, React 19).
+  - `web/vite.config.ts` proxies `/api` → localhost:3000 (same-origin, no CORS). Run the UI
+    with TWO terminals: `npm run server` (root, backend :3000) + `cd web && npm run dev` (:5173).
+  - `web/src/api.ts` = typed client mirroring server types + date fmt helpers.
+  - `web/src/App.tsx` = two-tab shell (Patient Intake / Admin Dashboard), clinical theme in
+    `index.css`/`App.css`. `web/src/views/Intake.tsx` = request box (3 demo-example chips +
+    pinned reference date) → POST /api/schedule → intent chips + top-3 slot cards (score,
+    matched factors w/ point contributions, plain-English explanation) + per-card Book button
+    → POST /api/book. `web/src/views/Admin.tsx` = placeholder (calendar = Task 18).
+  - Verified end-to-end THROUGH the Vite proxy: happy path, urgent best-effort, and a full
+    book (appt-003 created, in-memory count 2→3). `npx tsc -b` clean. Browser automation was
+    down so the VISUAL has not been eyeballed yet — open http://localhost:5173 to confirm.
+- [ ] **NEXT ACTION:** **Task 18** (live calendar grid in `web/src/components/Calendar.tsx`:
+  providers as columns, time rows, from GET /api/state; show appointments + grey rule blocks;
+  highlight recommended slots; booking updates the grid). Completes Floor 3. Inline + teaching.
 - Execution mode chosen: **inline together** (NOT subagent-driven — Scott must see/own every step).
 - Git: local repo initialized on `main`, remote connected to
   `https://github.com/srfinch17/planetdds-workflowoptimizer.git`. Commits NOT pushed yet
