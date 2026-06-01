@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getState, type StateResponse } from '../api'
+import { getState, getMetrics, type StateResponse, type MetricsResponse } from '../api'
 import { Calendar } from '../components/Calendar'
+import { Dashboard } from '../components/Dashboard'
 
 // The seed calendar has its appointments on this Thursday — a sensible default
 // so the grid opens with something to look at.
@@ -15,14 +16,16 @@ const DEFAULT_DAY = '2026-06-04'
 export function Admin() {
   const [day, setDay] = useState(DEFAULT_DAY)
   const [state, setState] = useState<StateResponse | null>(null)
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const reload = useCallback(() => {
     setLoading(true)
-    getState()
-      .then((s) => {
+    Promise.all([getState(), getMetrics()])
+      .then(([s, m]) => {
         setState(s)
+        setMetrics(m)
         setError(null)
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
@@ -58,6 +61,8 @@ export function Admin() {
       </div>
 
       {error && <div className="banner banner--error">{error}</div>}
+
+      {state && metrics && <Dashboard metrics={metrics} state={state} day={day} />}
 
       {state && (
         <Calendar providers={state.providers} appointments={state.appointments} rules={state.rules} day={day} />

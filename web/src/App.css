@@ -515,3 +515,120 @@
   align-items: center;
   z-index: 2;
 }
+
+/* ---------- dashboard ---------- */
+
+.dash {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dash-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+@media (max-width: 880px) {
+  .dash-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tile-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.tile-big {
+  font-size: 30px;
+  font-weight: 750;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.tile-sub {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.tile--donut {
+  align-items: center;
+  text-align: center;
+}
+
+.donut {
+  width: 118px;
+  height: 118px;
+}
+.donut-track {
+  fill: none;
+  stroke: #eef2f8;
+  stroke-width: 12;
+}
+.donut-value {
+  fill: none;
+  stroke: var(--good);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.4s ease;
+}
+.donut-num {
+  font-size: 22px;
+  font-weight: 750;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+.donut-label {
+  font-size: 10px;
+  fill: var(--ink-soft);
+  text-anchor: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.util {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.util-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.util-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 48px;
+  align-items: center;
+  gap: 12px;
+}
+.util-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.util-name small {
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.util-bar {
+  background: #eef2f8;
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+.util-bar__fill {
+  background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.util-val {
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--ink-soft);
+}

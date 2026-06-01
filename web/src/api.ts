@@ -107,6 +107,24 @@ export interface StateResponse {
   rules: AvailabilityRule[]
 }
 
+export interface MetricsResponse {
+  requestsServed: number
+  apiCalls: number
+  freeHandled: number
+  freeSharePct: number
+  pathCounts: Record<string, number>
+  estimatedUsd: number
+  costPer1000Usd: number
+  avgLatencyMs: number
+  tokenTotals: {
+    calls: number
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+    cacheCreationTokens: number
+  }
+}
+
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = ''
@@ -130,6 +148,10 @@ export function postSchedule(request: string, refDate?: string): Promise<Schedul
 
 export function getState(): Promise<StateResponse> {
   return fetch('/api/state').then((r) => jsonOrThrow<StateResponse>(r))
+}
+
+export function getMetrics(): Promise<MetricsResponse> {
+  return fetch('/api/metrics').then((r) => jsonOrThrow<MetricsResponse>(r))
 }
 
 export function postBook(
