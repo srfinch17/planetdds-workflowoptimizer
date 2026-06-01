@@ -10,6 +10,7 @@ import { AnthropicClient } from "../core/llm/anthropicClient";
 import { CostTracker } from "../core/llm/costTracker";
 import { ScheduleReasoningAgent } from "../core/schedule/ScheduleReasoningAgent";
 import { SchedulingAssistant } from "../core/orchestrator/SchedulingAssistant";
+import { loadDefaultTriageSkill } from "../core/skills/triage";
 import type { IntentExtractor } from "../core/intent/IntentExtractor";
 
 // This is the ONLY place the API key is read. It stays in this process; the
@@ -38,7 +39,9 @@ const llm: IntentExtractor = client
       },
     };
 
-const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(), llm, { offline });
+// The dental-triage Agent Skill drives clinical urgency from this file alone.
+const triageSkill = loadDefaultTriageSkill();
+const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(triageSkill), llm, { offline });
 const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store);
 
 const app = createApp({ store, assistant, tiered, costTracker, ruleLlm: client ?? undefined });

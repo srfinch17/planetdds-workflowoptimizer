@@ -7,6 +7,7 @@ import { AnthropicClient } from "../core/llm/anthropicClient";
 import { CostTracker } from "../core/llm/costTracker";
 import { ScheduleReasoningAgent } from "../core/schedule/ScheduleReasoningAgent";
 import { SchedulingAssistant } from "../core/orchestrator/SchedulingAssistant";
+import { loadDefaultTriageSkill } from "../core/skills/triage";
 import { weekdayOf } from "../core/time";
 import type { IntentExtractor } from "../core/intent/IntentExtractor";
 
@@ -58,7 +59,7 @@ export async function runScenarios(): Promise<void> {
     ? { extract: async () => { throw new Error("LLM unavailable (offline)"); } }
     : new LlmIntentExtractor(new AnthropicClient(), costTracker);
 
-  const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(), llm, { offline });
+  const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(loadDefaultTriageSkill()), llm, { offline });
   const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store);
 
   console.log("");

@@ -3,6 +3,12 @@ import type { ScheduleStore } from "../store/ScheduleStore";
 import type { SchedulingIntent, Urgency, Weekday } from "../types";
 import type { IntentContext, IntentExtractor } from "./IntentExtractor";
 import { weekdayOf } from "../time";
+import { classifyUrgency, type TriageSkill } from "../skills/triage";
+
+const URGENCY_RANK: Record<Urgency, number> = { routine: 0, soon: 1, urgent: 2 };
+function mostSevere(a: Urgency, b: Urgency): Urgency {
+  return URGENCY_RANK[a] >= URGENCY_RANK[b] ? a : b;
+}
 
 /**
  * The OFFLINE BRAIN — and the cost-saver.
@@ -17,13 +23,25 @@ import { weekdayOf } from "../time";
  * tiered layer can decide whether to escalate to the LLM.
  */
 export class RuleBasedIntentExtractor implements IntentExtractor {
+  /**
+   * @param triageSkill Optional dental-triage Agent Skill. When supplied, the
+   * symptom-based urgency it derives is combined with the timing keywords (the
+   * more severe wins). Omit it and urgency is keyword-only — existing behavior.
+   */
+  constructor(private readonly triageSkill?: TriageSkill) {}
+
   extract(request: string, ctx: IntentContext): SchedulingIntent {
     const text = request.toLowerCase();
 
     const { earliestDate, latestDate, daysOfWeek, dateResolved } = this.parseDates(request, ctx);
     const { timeEarliest, timeLatest, partOfDay, timeResolved } = parseTimeWindow(text);
     const appointmentType = parseType(text);
-    const urgency = parseUrgency(text);
+    // Timing keywords ("today", "asap") + the triage skill's clinical judgment
+    // ("swelling" → urgent). The skill can only raise severity, never lower it.
+    const keywordUrgency = parseUrgency(text);
+    const urgency = this.triageSkill
+      ? mostSevere(keywordUrgency, classifyUrgency(text, this.triageSkill).urgency)
+      : keywordUrgency;
     const preferredProviderId = parseProvider(text, ctx.store);
 
     // Confidence = how many independent signals we managed to resolve.
