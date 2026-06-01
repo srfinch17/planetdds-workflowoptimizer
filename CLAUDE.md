@@ -143,8 +143,20 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
     table) + `triage.ts` loader/classifier. RuleBasedIntentExtractor takes optional skill (combines
     with timing keywords, more-severe wins); server + scenarios load it. `tests/triage.test.ts` proves
     the swap-skill flex (tests/fixtures/conservative-triage). README written (also covers Task 24).
-- [x] **ALL FLOORS COMPLETE. Build done.** 70 tests green. `npm run scenarios` = 3 served, 0 API
-  calls, $0. Full web app (intake + admin dashboard + live calendar + NL rule teaching + triage skill).
+- [x] **ALL FLOORS COMPLETE. Build done.** Full web app (intake + admin dashboard + live calendar
+  + NL rule teaching + triage skill).
+- [x] **QA PASS DONE (72 tests green; `npm run typecheck` clean; web build clean).** Verified live:
+  3 demo scenarios (all free rules path; #3 urgent+bestEffort), vague request → live `llm` path
+  ($0.0008/call), all error paths (400/404/409/422), rule-teaching enforced, triage drives urgency.
+  Fixes found+made this pass:
+  1. `.env` now authoritative (override:true) — a shell-exported EMPTY ANTHROPIC_API_KEY was
+     trapping the app offline. Empty/whitespace key treated as no key. (also fixed in scenarios.ts)
+  2. POST /api/book now rejects conflicts (409) — was allowing double-booking of overlapping slots.
+  3. ScheduleReasoningAgent assigns DISTINCT operatories to top-N — was funneling all picks into
+     one room, so the top recommendations weren't independently bookable.
+  4. Added `npm run typecheck`; fixed test json() unknown-type errors.
+  - NOT testable by me: the actual VISUAL rendering (Chrome extension never connected). Calendar
+    grid math was traced by hand and looks correct, but Scott must eyeball http://localhost:5173.
 - [ ] **REMAINING (not building — verification + delivery):**
   1. **Push to GitHub** — commits are LOCAL only; needs Scott's auth (ASK before pushing).
   2. **Eyeball the UI** at http://localhost:5173 (never visually checked — Chrome ext not connected).
