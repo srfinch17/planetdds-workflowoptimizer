@@ -42,7 +42,7 @@ describe("Hono backend API", () => {
       body: JSON.stringify({ request: "Can I come in next Thursday after 3?", refDate: "2026-05-31" }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.intent).toBeDefined();
     expect(body.intent.urgency).toBeDefined();
     expect(body.recommendation.slots.length).toBeGreaterThan(0);
@@ -61,7 +61,7 @@ describe("Hono backend API", () => {
   it("GET /api/state exposes the calendar data", async () => {
     const res = await app.request("/api/state");
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(Array.isArray(body.providers)).toBe(true);
     expect(body.providers.length).toBeGreaterThan(0);
     expect(Array.isArray(body.operatories)).toBe(true);
@@ -77,7 +77,7 @@ describe("Hono backend API", () => {
     });
     const res = await app.request("/api/metrics");
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.requestsServed).toBeGreaterThanOrEqual(1);
     expect(body.apiCalls).toBe(0); // offline → rules path only
     expect(body.freeHandled).toBe(body.requestsServed); // everything was free
@@ -90,14 +90,14 @@ describe("Hono backend API", () => {
   });
 
   it("POST /api/rules parses a sentence (offline regex) and adds the rule", async () => {
-    const before = await (await app.request("/api/state")).json();
+    const before = (await (await app.request("/api/state")).json()) as any;
     const res = await app.request("/api/rules", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ sentence: "Dr. Jones takes lunch from 12 to 1 every day" }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.rule.providerId).toBe("prov-jones");
     expect(body.rule.kind).toBe("block");
     expect(body.rule.id).toBeDefined(); // store assigned an id
@@ -111,7 +111,7 @@ describe("Hono backend API", () => {
       body: JSON.stringify({ sentence: "make the schedule better somehow" }),
     });
     expect(res.status).toBe(422);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.error).toBeDefined();
   });
 
@@ -148,10 +148,10 @@ describe("Hono backend API", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ request: "Can I come in next Thursday after 3?", refDate: "2026-05-31" }),
     });
-    const { recommendation } = await sched.json();
+    const { recommendation } = (await sched.json()) as any;
     const slot = recommendation.slots[0].slot;
 
-    const before = await (await app.request("/api/state")).json();
+    const before = (await (await app.request("/api/state")).json()) as any;
 
     const res = await app.request("/api/book", {
       method: "POST",
@@ -159,7 +159,7 @@ describe("Hono backend API", () => {
       body: JSON.stringify({ slot, patientId: "pat-doe" }),
     });
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.appointment).toBeDefined();
     expect(body.appointment.patientId).toBe("pat-doe");
     expect(body.appointments.length).toBe(before.appointments.length + 1);

@@ -7,6 +7,7 @@
     "cli": "tsx src/cli/index.ts",
     "scenarios": "tsx src/cli/scenarios.ts",
     "server": "tsx src/server/index.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
