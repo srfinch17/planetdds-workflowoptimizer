@@ -1,0 +1,5 @@
+[
+  { "id": "op-1", "name": "Operatory 1", "equipment": ["xray"] },
+  { "id": "op-2", "name": "Operatory 2", "equipment": ["xray"] },
+  { "id": "op-3", "name": "Operatory 3", "equipment": [] }
+]

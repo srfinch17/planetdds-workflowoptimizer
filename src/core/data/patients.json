@@ -1,0 +1,4 @@
+[
+  { "id": "pat-doe", "name": "Jane Doe", "preferredProviderId": "prov-smith" },
+  { "id": "pat-roe", "name": "Richard Roe", "preferredProviderId": null }
+]
