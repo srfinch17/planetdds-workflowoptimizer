@@ -38,7 +38,18 @@ export class ScheduleReasoningAgent {
       (a, b) => b.score - a.score || a.slot.start.localeCompare(b.slot.start),
     );
 
-    const slots = ranked.slice(0, n);
+    // If the patient named a provider, people usually want THEIR dentist. Lead
+    // with that provider's best slots, then append the best from other providers
+    // as alternatives, so the UI can show two groups. Otherwise: flat top-N.
+    const pref = intent.preferredProviderId ?? null;
+    let slots: ScoredSlot[];
+    if (pref) {
+      const mine = ranked.filter((s) => s.slot.providerId === pref).slice(0, n);
+      const others = ranked.filter((s) => s.slot.providerId !== pref).slice(0, n);
+      slots = [...mine, ...others];
+    } else {
+      slots = ranked.slice(0, n);
+    }
 
     // Give overlapping top picks DISTINCT rooms so they're independently
     // bookable up to physical capacity (the dedup above can hand the same free
@@ -50,7 +61,7 @@ export class ScheduleReasoningAgent {
     const top = slots[0];
     const bestEffort = top ? !timeWindowSatisfied(top) : true;
 
-    return { slots, bestEffort };
+    return { slots, bestEffort, preferredProviderId: pref };
   }
 }
 

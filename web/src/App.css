@@ -950,3 +950,196 @@
   background: var(--rule-bg);
   border: 1px solid var(--rule-border);
 }
+
+/* ============================================================
+   Hardware-panel refinements (mission-control aesthetic)
+   ============================================================ */
+
+/* monospace for data + labels — the "instrument readout" feel */
+.field-label,
+.tile-label,
+.app-header__mode,
+.app-header__title,
+.log-type,
+.cal-head,
+.cal-time,
+.rec-group__title,
+.tab,
+.theme-toggle select {
+  font-family: var(--font-mono);
+}
+.slot-score,
+.slot-rank,
+.tile-big,
+.donut-num,
+.log-time,
+.cb-time,
+.util-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* sticky, frosted header with a live signal dot */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: blur(8px);
+}
+.app-header__mark {
+  color: var(--on-brand);
+  font-size: 15px;
+  box-shadow: var(--glow);
+}
+.app-header__mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.app-header__mode::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 8px var(--brand);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* tabs */
+.tab {
+  letter-spacing: 0.02em;
+}
+.tab--active {
+  text-shadow: 0 0 14px color-mix(in srgb, var(--brand) 45%, transparent);
+}
+
+/* buttons: primary = signal green with dark ink + glow on hover */
+.btn--primary {
+  color: var(--on-brand);
+}
+.btn--primary:not(:disabled):hover {
+  box-shadow: var(--glow);
+}
+.btn:not(.btn--primary):not(.btn--danger):not(:disabled):hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* result cards lift toward the cursor */
+.slot-card {
+  transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  animation: riseIn 0.3s ease backwards;
+}
+.slot-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--brand-soft-border);
+  box-shadow: var(--shadow), var(--glow);
+}
+.slot-grid .slot-card:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.slot-grid .slot-card:nth-child(3) {
+  animation-delay: 0.1s;
+}
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* rank → orange instrument chip */
+.slot-rank {
+  color: var(--rank);
+  background: var(--rank-bg);
+  border: 1px solid var(--rank);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-weight: 700;
+  font-size: 11.5px;
+}
+.slot-score {
+  box-shadow: inset 0 0 0 1px var(--brand-soft-border);
+  cursor: help;
+}
+
+/* focus glow */
+.request-input:focus,
+.rule-input:focus,
+.ref-date input:focus,
+.calendar-toolbar input:focus,
+select:focus-visible {
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+/* recommendation groups (your dentist vs. alternatives) */
+.rec-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rec-group + .rec-group {
+  margin-top: 6px;
+}
+.rec-group__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rec-group__title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+.rec-group__title strong {
+  color: var(--brand);
+}
+.rec-empty {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+/* small inline emoji icons */
+.ico {
+  font-style: normal;
+  margin-right: 6px;
+  opacity: 0.95;
+}
+
+/* a recommended calendar slot becomes a Book button */
+button.cal-block {
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 5px;
+}
+button.cal-block--hl:hover {
+  background: var(--brand);
+  color: var(--on-brand);
+  box-shadow: var(--glow);
+}
+.cal-block--hl.is-booked {
+  background: var(--soft);
+  color: var(--ink-soft);
+  border-color: var(--line);
+  cursor: default;
+}

@@ -46,6 +46,7 @@ export interface ScoredSlot {
 export interface Recommendation {
   slots: ScoredSlot[]
   bestEffort: boolean
+  preferredProviderId?: string | null
 }
 
 export type IntentPath = 'rules' | 'llm' | 'offline-fallback' | 'llm-failed-fallback' | null

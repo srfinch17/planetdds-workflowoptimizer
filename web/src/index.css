@@ -1,79 +1,102 @@
-/* Base reset + design tokens. Light is the default; [data-theme="dark"] on
-   <html> overrides the palette. Every surface/color in the app resolves to one
-   of these variables, so the two themes stay in lockstep. */
+/* ============================================================================
+   Design system — "mission-control": a hardware/terminal panel aesthetic.
+   Near-black surfaces, a neon-green signal accent, IBM Plex Mono for data and
+   labels, IBM Plex Sans for prose. Every color resolves to a token so the
+   light + dark themes stay in lockstep. Inspired by an ESP32 control panel.
+   ============================================================================ */
+
 :root {
-  --bg: #f4f7fb;
+  /* type */
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  /* LIGHT theme (an ESP32-flavored light panel) */
+  --bg: #eef1ee;
   --surface: #ffffff;
-  --ink: #1a2433;
-  --ink-soft: #5a6677;
-  --line: #e2e8f1;
-  --brand: #1f6feb;
-  --brand-dark: #1857c0;
-  --good: #1f9d63;
-  --good-bg: #e7f5ee;
-  --good-soft-border: #c6e7d4;
-  --warn: #c47d12;
+  --panel: #f4f7f4;
+  --ink: #15201a;
+  --ink-soft: #5c6b62;
+  --line: #e0e6e1;
+  --brand: #0a9d5a;
+  --brand-dark: #077a45;
+  --brand-soft: #e4f6ec;
+  --brand-soft-border: #bbe6cf;
+  --on-brand: #ffffff;
+  --good: #0a9d5a;
+  --good-bg: #e4f6ec;
+  --good-soft-border: #bbe6cf;
+  --warn: #bf7212;
   --warn-bg: #fbf1de;
-  --warn-soft-border: #e9d8b0;
-  --bad: #c2392f;
+  --warn-soft-border: #ecd6a8;
+  --bad: #cc382b;
   --bad-soft: #fdecea;
   --bad-soft-border: #f3c2bd;
-  --soft: #eef2f8;
-  --brand-soft: #e7effd;
-  --brand-soft-border: #c5dbfb;
-  --panel: #f7fafe;
-  --rule-bg: #eceff4;
-  --rule-border: #dde3ec;
-  --appt-bg: #dbe7fb;
-  --appt-border: #bdd2f5;
-  --appt-ink: #173a6b;
-  --appt-ink-soft: #3a5e93;
-  --hatch-1: #f1f4f9;
-  --hatch-2: #e9eef5;
-  --hatch-off-1: #eef1f6;
-  --hatch-off-2: #e4e9f1;
-  --shadow: 0 1px 2px rgba(16, 30, 54, 0.06), 0 4px 16px rgba(16, 30, 54, 0.06);
-  --radius: 10px;
+  --rank: #de7a12;
+  --rank-bg: #fbeede;
+  --soft: #eef2ef;
+  --brand-soft-2: #e4f6ec;
+  --rule-bg: #edf1ee;
+  --rule-border: #dde4df;
+  --appt-bg: #dde9f6;
+  --appt-border: #c2d6ee;
+  --appt-ink: #1d3a5e;
+  --appt-ink-soft: #436289;
+  --hatch-1: #eef1ee;
+  --hatch-2: #e6ebe7;
+  --hatch-off-1: #ebefec;
+  --hatch-off-2: #e1e7e2;
+  --halo: rgba(10, 157, 90, 0.07);
+  --grid-line: rgba(16, 40, 28, 0.025);
+  --glow: 0 6px 18px rgba(10, 157, 90, 0.18);
+  --shadow: 0 1px 2px rgba(16, 40, 28, 0.05), 0 4px 16px rgba(16, 40, 28, 0.06);
+  --radius: 12px;
   color-scheme: light;
 
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
   color: var(--ink);
 }
 
 :root[data-theme="dark"] {
-  --bg: #0e131a;
-  --surface: #19212c;
-  --ink: #e7edf5;
-  --ink-soft: #94a3b5;
-  --line: #2a3543;
-  --brand: #5b9bff;
-  --brand-dark: #4385f0;
-  --good: #4fcf92;
-  --good-bg: #163127;
-  --good-soft-border: #2a5740;
-  --warn: #e3a948;
-  --warn-bg: #362c17;
-  --warn-soft-border: #5a4a24;
-  --bad: #f07a6d;
-  --bad-soft: #3a201d;
-  --bad-soft-border: #5c302b;
-  --soft: #222c39;
-  --brand-soft: #1c2f4d;
-  --brand-soft-border: #2f4d78;
-  --panel: #141b25;
-  --rule-bg: #232c39;
-  --rule-border: #313d4c;
-  --appt-bg: #1d3457;
-  --appt-border: #315185;
-  --appt-ink: #bcd3f5;
-  --appt-ink-soft: #8cafdc;
-  --hatch-1: #1a222e;
-  --hatch-2: #151c26;
-  --hatch-off-1: #1d2630;
-  --hatch-off-2: #161e27;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.45);
+  --bg: #0a0c0b;
+  --surface: #131715;
+  --panel: #0e1210;
+  --ink: #dfe7e1;
+  --ink-soft: #7e8a82;
+  --line: #232a26;
+  --brand: #18e08a;
+  --brand-dark: #10b86f;
+  --brand-soft: #0f241a;
+  --brand-soft-border: #1c4733;
+  --on-brand: #04150c;
+  --good: #18e08a;
+  --good-bg: #0f241a;
+  --good-soft-border: #1c4733;
+  --warn: #f7a23a;
+  --warn-bg: #241a0b;
+  --warn-soft-border: #4f3a18;
+  --bad: #ff6257;
+  --bad-soft: #261210;
+  --bad-soft-border: #532824;
+  --rank: #f7a23a;
+  --rank-bg: #241a0b;
+  --soft: #1a201c;
+  --brand-soft-2: #0f241a;
+  --rule-bg: #181d1a;
+  --rule-border: #262d28;
+  --appt-bg: #16242f;
+  --appt-border: #294056;
+  --appt-ink: #bcd2e6;
+  --appt-ink-soft: #88a2bb;
+  --hatch-1: #131715;
+  --hatch-2: #0e1210;
+  --hatch-off-1: #171c19;
+  --hatch-off-2: #11150f;
+  --halo: rgba(24, 224, 138, 0.08);
+  --grid-line: rgba(255, 255, 255, 0.018);
+  --glow: 0 0 24px rgba(24, 224, 138, 0.22);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
 
@@ -85,11 +108,16 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
   color: var(--ink);
+  /* faint terminal grid + a soft signal-green halo bleeding from the top */
+  background:
+    radial-gradient(1100px 440px at 50% -160px, var(--halo), transparent 70%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 100% 28px,
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 28px 100%,
+    var(--bg);
+  background-attachment: fixed;
 }
 
-/* Smooth, modest cross-fade when the theme flips. */
 body,
 .card,
 .app-header,
@@ -103,7 +131,8 @@ body,
 input,
 select,
 textarea {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease,
+    box-shadow 0.18s ease, transform 0.12s ease;
 }
 
 #root {
@@ -115,7 +144,6 @@ button {
   cursor: pointer;
 }
 
-/* Form controls follow the theme (and color-scheme themes their popups/arrows). */
 input,
 select,
 textarea {
@@ -128,7 +156,9 @@ h2,
 h3 {
   margin: 0;
   color: var(--ink);
-  font-weight: 650;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 p {
@@ -136,9 +166,29 @@ p {
 }
 
 code {
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
-  font-size: 0.9em;
+  font-family: var(--font-mono);
+  font-size: 0.86em;
   background: var(--soft);
   padding: 1px 5px;
   border-radius: 4px;
+}
+
+/* thin hardware-style scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-soft);
+  background-clip: content-box;
 }

@@ -71,4 +71,23 @@ describe("ScheduleReasoningAgent.recommend", () => {
     expect(rec.bestEffort).toBe(true);
     expect(rec.slots.length).toBeGreaterThan(0);
   });
+
+  it("when a provider is requested, leads with their slots then includes alternatives", () => {
+    const rec = agent.recommend(intent({ preferredProviderId: "prov-smith" }), store, 3, opts);
+    expect(rec.preferredProviderId).toBe("prov-smith");
+    // The requested provider leads the list...
+    expect(rec.slots[0]!.slot.providerId).toBe("prov-smith");
+    // ...and at least one alternative from a different provider is offered.
+    expect(rec.slots.some((s) => s.slot.providerId !== "prov-smith")).toBe(true);
+    // The preferred slots come before any alternative.
+    const firstOtherIdx = rec.slots.findIndex((s) => s.slot.providerId !== "prov-smith");
+    const lastPrefIdx = rec.slots.map((s) => s.slot.providerId === "prov-smith").lastIndexOf(true);
+    expect(firstOtherIdx).toBeGreaterThan(lastPrefIdx === -1 ? Infinity : lastPrefIdx);
+  });
+
+  it("no provider requested → flat top-N (no preferredProviderId)", () => {
+    const rec = agent.recommend(intent({}), store, 3, opts);
+    expect(rec.preferredProviderId ?? null).toBeNull();
+    expect(rec.slots.length).toBeLessThanOrEqual(3);
+  });
 });

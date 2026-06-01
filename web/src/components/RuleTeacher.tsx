@@ -32,7 +32,7 @@ export function RuleTeacher({ onApplied }: { onApplied: () => void }) {
 
   return (
     <section className="card rule-teacher">
-      <span className="field-label">Teach a scheduling rule (plain English)</span>
+      <span className="field-label">🧩 Teach a scheduling rule (plain English)</span>
       <div className="rule-row">
         <input
           className="rule-input"

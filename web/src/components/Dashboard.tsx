@@ -94,7 +94,7 @@ export function Dashboard({
     <div className="dash">
       <div className="dash-tiles">
         <div className="card tile tile--donut">
-          <span className="tile-label">Handled without an API call</span>
+          <span className="tile-label">📡 Handled without an API call</span>
           <Donut pct={metrics.freeSharePct} />
           <span className="tile-sub">
             {metrics.freeHandled} of {metrics.requestsServed} requests · {metrics.apiCalls} LLM call
@@ -103,13 +103,13 @@ export function Dashboard({
         </div>
 
         <div className="card tile">
-          <span className="tile-label">Est. cost / 1,000 requests</span>
+          <span className="tile-label">💸 Est. cost / 1,000 requests</span>
           <span className="tile-big">${metrics.costPer1000Usd.toFixed(2)}</span>
           <span className="tile-sub">at the current mix · ${metrics.estimatedUsd.toFixed(4)} spent so far</span>
         </div>
 
         <div className="card tile">
-          <span className="tile-label">Avg time to recommend</span>
+          <span className="tile-label">⚡ Avg time to recommend</span>
           <span className="tile-big">
             {metrics.avgLatencyMs > 0 ? `${metrics.avgLatencyMs} ms` : '—'}
           </span>
@@ -119,14 +119,14 @@ export function Dashboard({
         </div>
 
         <div className="card tile">
-          <span className="tile-label">Requests served</span>
+          <span className="tile-label">📈 Requests served</span>
           <span className="tile-big">{metrics.requestsServed}</span>
           <span className="tile-sub">this session</span>
         </div>
       </div>
 
       <div className="card util">
-        <span className="tile-label">Provider utilization · {day}</span>
+        <span className="tile-label">🦷 Provider utilization · {day}</span>
         <div className="util-rows">
           {utils.map((u) => (
             <div key={u.name} className="util-row">

@@ -7,7 +7,8 @@ export function CallbackQueue({ callbacks }: { callbacks: CallbackRecord[] }) {
   return (
     <section className="card callback-queue">
       <span className="field-label">
-        Emergency callback queue {callbacks.length > 0 && <span className="cb-count">{callbacks.length}</span>}
+        📞 Emergency callback queue{' '}
+        {callbacks.length > 0 && <span className="cb-count">{callbacks.length}</span>}
       </span>
       {callbacks.length === 0 ? (
         <p className="tile-sub">No callbacks pending. Emergency/urgent requests appear here for staff to phone back.</p>

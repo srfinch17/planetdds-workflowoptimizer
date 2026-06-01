@@ -32,6 +32,8 @@ export interface CalendarProps {
   rules: AvailabilityRule[]
   day: string // "YYYY-MM-DD"
   highlights?: Set<string> // `${providerId}@${startISO}` — recommended slots to light up
+  bookedKeys?: Set<string> // recommended slots already booked (shown as ✓)
+  onBookSlot?: (key: string) => void // when set, highlights become Book buttons
 }
 
 /**
@@ -41,7 +43,15 @@ export interface CalendarProps {
  * day-off shading → rule blocks (lunch) → booked appointments → recommendation
  * highlights. It renders purely from props; the parent owns the data + refresh.
  */
-export function Calendar({ providers, appointments, rules, day, highlights }: CalendarProps) {
+export function Calendar({
+  providers,
+  appointments,
+  rules,
+  day,
+  highlights,
+  bookedKeys,
+  onBookSlot,
+}: CalendarProps) {
   const wd = weekdayOf(day)
   const dayAppts = appointments.filter((a) => a.start.slice(0, 10) === day)
 
@@ -143,12 +153,29 @@ export function Calendar({ providers, appointments, rules, day, highlights }: Ca
           if (start.slice(0, 10) !== day) return null
           const idx = providers.findIndex((p) => p.id === pid)
           if (idx < 0) return null
+          const style = {
+            gridColumn: 2 + idx,
+            gridRow: `${line(isoToMin(start))} / ${line(isoToMin(start) + STEP)}`,
+          }
+          const isBooked = bookedKeys?.has(key) ?? false
+          // When the parent passes onBookSlot, recommended slots are clickable
+          // Book buttons; otherwise they're static highlights (e.g. on Admin).
+          if (onBookSlot) {
+            return (
+              <button
+                key={`hl-${key}`}
+                className={`cal-block cal-block--hl${isBooked ? ' is-booked' : ''}`}
+                style={style}
+                disabled={isBooked}
+                title={isBooked ? 'Booked' : 'Book this recommended slot'}
+                onClick={() => onBookSlot(key)}
+              >
+                {isBooked ? '✓ booked' : '★ book'}
+              </button>
+            )
+          }
           return (
-            <div
-              key={`hl-${key}`}
-              className="cal-block cal-block--hl"
-              style={{ gridColumn: 2 + idx, gridRow: `${line(isoToMin(start))} / ${line(isoToMin(start) + STEP)}` }}
-            >
+            <div key={`hl-${key}`} className="cal-block cal-block--hl" style={style}>
               ★ recommended
             </div>
           )

@@ -19,9 +19,9 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="app-header__bar">
-          <div className="app-header__mark">S</div>
+          <div className="app-header__mark">🦷</div>
           <div className="app-header__title">
-            Scheduling Assistant <span>· Planet DDS</span>
+            Scheduling Assistant <span>· ops console</span>
           </div>
           <div className="app-header__spacer" />
           <div className="app-header__mode">agentic · explainable · cost-aware</div>
@@ -32,13 +32,13 @@ function App() {
             className={`tab ${tab === 'intake' ? 'tab--active' : ''}`}
             onClick={() => setTab('intake')}
           >
-            Patient Intake
+            🗓️ Patient Intake
           </button>
           <button
             className={`tab ${tab === 'admin' ? 'tab--active' : ''}`}
             onClick={() => setTab('admin')}
           >
-            Admin Dashboard
+            📊 Admin Dashboard
           </button>
         </nav>
       </header>

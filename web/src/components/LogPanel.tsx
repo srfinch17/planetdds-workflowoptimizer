@@ -75,7 +75,7 @@ export function LogPanel() {
   return (
     <section className="card logpanel">
       <div className="logpanel__head">
-        <span className="field-label">Activity &amp; audit log</span>
+        <span className="field-label">📡 Activity &amp; audit log</span>
         <div className="logpanel__actions">
           <button className="btn btn--sm" onClick={load}>
             Refresh

@@ -102,6 +102,9 @@ export interface Recommendation {
   // true when NO slot fully satisfied the requested time window — we returned
   // the closest-scoring slots anyway rather than nothing. Keeps the demo honest.
   bestEffort: boolean;
+  // When the patient named a provider, this echoes it so the UI can group the
+  // results into "your dentist" (matching slots, listed first) vs alternatives.
+  preferredProviderId?: string | null;
 }
 
 // --- Emergency escalation ---
