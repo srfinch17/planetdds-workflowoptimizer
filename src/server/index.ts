@@ -1,4 +1,8 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+// override:true makes .env authoritative even if the shell already exported an
+// (often empty) ANTHROPIC_API_KEY — dotenv v17 otherwise refuses to replace a
+// var that already exists, which silently traps the app in offline mode.
+dotenv.config({ override: true });
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";
@@ -23,10 +27,11 @@ const PORT = Number(process.env.PORT ?? 3000);
 const store = new JsonScheduleStore(DATA_DIR, { persist: false });
 const costTracker = new CostTracker();
 
-// Online only when a key is present and offline isn't forced. Otherwise the LLM
-// extractor is a throw-stub the tiered layer never reaches (it short-circuits
-// to the rule-based result first).
-const offline = process.env.SCHEDULER_OFFLINE === "true" || !process.env.ANTHROPIC_API_KEY;
+// Online only when a NON-EMPTY key is present and offline isn't forced. A
+// whitespace/empty key counts as no key. Otherwise the LLM extractor is a
+// throw-stub the tiered layer never reaches (it short-circuits to rules first).
+const hasKey = (process.env.ANTHROPIC_API_KEY ?? "").trim().length > 0;
+const offline = process.env.SCHEDULER_OFFLINE === "true" || !hasKey;
 
 // One Anthropic client, shared by intent extraction AND rule translation, so
 // both share the same key and cost meter. Null when offline → both fall back.

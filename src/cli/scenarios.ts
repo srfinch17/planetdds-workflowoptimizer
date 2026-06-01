@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config({ override: true }); // load .env (authoritative) for the online path
 import { fileURLToPath } from "node:url";
 import { JsonScheduleStore } from "../core/store/JsonScheduleStore";
 import { RuleBasedIntentExtractor } from "../core/intent/RuleBasedIntentExtractor";
@@ -54,7 +56,8 @@ export async function runScenarios(): Promise<void> {
 
   // Online only if a key is present AND offline isn't forced. Otherwise the LLM
   // stub is never reached (tiered offline mode short-circuits before it).
-  const offline = process.env.SCHEDULER_OFFLINE === "true" || !process.env.ANTHROPIC_API_KEY;
+  const hasKey = (process.env.ANTHROPIC_API_KEY ?? "").trim().length > 0;
+  const offline = process.env.SCHEDULER_OFFLINE === "true" || !hasKey;
   const llm: IntentExtractor = offline
     ? { extract: async () => { throw new Error("LLM unavailable (offline)"); } }
     : new LlmIntentExtractor(new AnthropicClient(), costTracker);
