@@ -632,3 +632,41 @@
   text-align: right;
   color: var(--ink-soft);
 }
+
+/* ---------- rule teacher ---------- */
+
+.rule-teacher {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rule-row {
+  display: flex;
+  gap: 10px;
+}
+.rule-input {
+  flex: 1;
+  font: inherit;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+}
+.rule-input:focus {
+  outline: 2px solid var(--brand);
+  border-color: var(--brand);
+}
+.rule-applied {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rule-applied code {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: #f7fafe;
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  word-break: break-all;
+}

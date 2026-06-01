@@ -26,18 +26,22 @@ const costTracker = new CostTracker();
 // extractor is a throw-stub the tiered layer never reaches (it short-circuits
 // to the rule-based result first).
 const offline = process.env.SCHEDULER_OFFLINE === "true" || !process.env.ANTHROPIC_API_KEY;
-const llm: IntentExtractor = offline
-  ? {
+
+// One Anthropic client, shared by intent extraction AND rule translation, so
+// both share the same key and cost meter. Null when offline → both fall back.
+const client = offline ? null : new AnthropicClient();
+const llm: IntentExtractor = client
+  ? new LlmIntentExtractor(client, costTracker)
+  : {
       extract: async () => {
         throw new Error("LLM unavailable (offline)");
       },
-    }
-  : new LlmIntentExtractor(new AnthropicClient(), costTracker);
+    };
 
 const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(), llm, { offline });
 const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store);
 
-const app = createApp({ store, assistant, tiered, costTracker });
+const app = createApp({ store, assistant, tiered, costTracker, ruleLlm: client ?? undefined });
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log("");

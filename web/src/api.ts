@@ -154,6 +154,16 @@ export function getMetrics(): Promise<MetricsResponse> {
   return fetch('/api/metrics').then((r) => jsonOrThrow<MetricsResponse>(r))
 }
 
+export function postRule(
+  sentence: string,
+): Promise<{ rule: AvailabilityRule; source: 'rules' | 'llm'; rules: AvailabilityRule[] }> {
+  return fetch('/api/rules', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sentence }),
+  }).then((r) => jsonOrThrow(r))
+}
+
 export function postBook(
   slot: CandidateSlot,
   patientId: string,

@@ -89,13 +89,30 @@ describe("Hono backend API", () => {
     expect(body.pathCounts).toBeDefined();
   });
 
-  it("POST /api/rules is stubbed 501 until Floor 5 wires the parser", async () => {
+  it("POST /api/rules parses a sentence (offline regex) and adds the rule", async () => {
+    const before = await (await app.request("/api/state")).json();
     const res = await app.request("/api/rules", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sentence: "Dr. Smith takes lunch from 11 to 12:30" }),
+      body: JSON.stringify({ sentence: "Dr. Jones takes lunch from 12 to 1 every day" }),
     });
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.rule.providerId).toBe("prov-jones");
+    expect(body.rule.kind).toBe("block");
+    expect(body.rule.id).toBeDefined(); // store assigned an id
+    expect(body.rules.length).toBe(before.rules.length + 1);
+  });
+
+  it("POST /api/rules returns 422 when it can't parse and there's no LLM", async () => {
+    const res = await app.request("/api/rules", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sentence: "make the schedule better somehow" }),
+    });
+    expect(res.status).toBe(422);
+    const body = await res.json();
+    expect(body.error).toBeDefined();
   });
 
   it("POST /api/book books a recommended slot and returns the updated list", async () => {

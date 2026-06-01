@@ -3,7 +3,9 @@ import type { ScheduleStore } from "../core/store/ScheduleStore";
 import type { SchedulingAssistant } from "../core/orchestrator/SchedulingAssistant";
 import type { TieredIntentExtractor } from "../core/intent/TieredIntentExtractor";
 import type { CostTracker } from "../core/llm/costTracker";
-import type { CandidateSlot } from "../core/types";
+import type { CandidateSlot, AvailabilityRule } from "../core/types";
+import type { LlmClient } from "../core/llm/anthropicClient";
+import { parseRuleSentence } from "../core/rules/ruleParser";
 import { LatencyMeter } from "./metrics";
 
 /**
@@ -17,6 +19,7 @@ export interface AppDeps {
   assistant: SchedulingAssistant;
   tiered: TieredIntentExtractor; // same instance the assistant uses → lastPath/pathCounts
   costTracker: CostTracker;
+  ruleLlm?: LlmClient; // optional: lets POST /api/rules fall back to the LLM when present
 }
 
 /**
@@ -24,7 +27,7 @@ export interface AppDeps {
  * on a port (index.ts) or drive it directly in a test.
  */
 export function createApp(deps: AppDeps): Hono {
-  const { store, assistant, tiered, costTracker } = deps;
+  const { store, assistant, tiered, costTracker, ruleLlm } = deps;
   const app = new Hono();
   const latency = new LatencyMeter(); // how fast we answer, server-side
 
@@ -91,10 +94,34 @@ export function createApp(deps: AppDeps): Hono {
     return c.json({ appointment, appointments: store.getAppointments() });
   });
 
-  // Plain-English rule teaching — wired in Floor 5 (Task 22). Honest stub now.
-  app.post("/api/rules", (c) => {
-    return c.json({ error: "not implemented yet — natural-language rules land in Floor 5" }, 501);
+  // Plain-English rule teaching. The parser translates the sentence into a
+  // STRUCTURED rule (regex offline, LLM fallback when ruleLlm is present), which
+  // the deterministic scheduler then enforces. Validation lives in the parser;
+  // a sentence it can't turn into a rule is a 422, not a silent no-op.
+  app.post("/api/rules", async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const sentence = typeof body.sentence === "string" ? body.sentence.trim() : "";
+    if (sentence.length === 0) {
+      return c.json({ error: "sentence must be a non-empty string" }, 400);
+    }
+    const parsed = await parseRuleSentence(sentence, store, { llm: ruleLlm, costTracker });
+    if (!parsed.ok) {
+      return c.json({ error: parsed.error }, 422);
+    }
+    const rule: AvailabilityRule = { ...parsed.rule, id: nextRuleId(store.getRules()) };
+    store.addRule(rule);
+    return c.json({ rule, source: parsed.source, rules: store.getRules() });
   });
 
   return app;
+}
+
+/** Next id like "rule-003" by incrementing the max numeric suffix. */
+function nextRuleId(existing: AvailabilityRule[]): string {
+  let max = 0;
+  for (const r of existing) {
+    const n = Number(r.id.split("-").pop());
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return `rule-${String(max + 1).padStart(3, "0")}`;
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getState, getMetrics, type StateResponse, type MetricsResponse } from '../api'
 import { Calendar } from '../components/Calendar'
 import { Dashboard } from '../components/Dashboard'
+import { RuleTeacher } from '../components/RuleTeacher'
 
 // The seed calendar has its appointments on this Thursday — a sensible default
 // so the grid opens with something to look at.
@@ -63,6 +64,8 @@ export function Admin() {
       {error && <div className="banner banner--error">{error}</div>}
 
       {state && metrics && <Dashboard metrics={metrics} state={state} day={day} />}
+
+      <RuleTeacher onApplied={reload} />
 
       {state && (
         <Calendar providers={state.providers} appointments={state.appointments} rules={state.rules} day={day} />
