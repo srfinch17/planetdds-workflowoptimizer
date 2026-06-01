@@ -131,7 +131,9 @@ function factor(
   contribution: number,
   detail: string,
 ): ScoreFactor {
-  return { name, weight, matched, contribution, detail };
+  // Round to whole points so the score is exactly the sum of the points shown —
+  // and so no slot ever displays "+4.999999999999".
+  return { name, weight, matched, contribution: Math.round(contribution), detail };
 }
 
 function minutesOfDay(iso: string): number {
