@@ -115,6 +115,32 @@ describe("Hono backend API", () => {
     expect(body.error).toBeDefined();
   });
 
+  it("POST /api/book rejects a slot that conflicts with an existing booking (409)", async () => {
+    const slotA = {
+      providerId: "prov-pana",
+      operatoryId: "op-2",
+      start: "2026-06-04T15:00:00",
+      end: "2026-06-04T15:30:00",
+      type: "appointment",
+    };
+    // Overlaps slotA for the same provider (15:15–15:45 vs 15:00–15:30).
+    const slotB = { ...slotA, start: "2026-06-04T15:15:00", end: "2026-06-04T15:45:00" };
+
+    const first = await app.request("/api/book", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot: slotA, patientId: "pat-doe" }),
+    });
+    expect(first.status).toBe(200);
+
+    const second = await app.request("/api/book", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot: slotB, patientId: "pat-roe" }),
+    });
+    expect(second.status).toBe(409); // no double-booking
+  });
+
   it("POST /api/book books a recommended slot and returns the updated list", async () => {
     // First get a real, bookable slot from the scheduler.
     const sched = await app.request("/api/schedule", {

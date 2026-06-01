@@ -45,6 +45,21 @@ describe("ScheduleReasoningAgent.recommend", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it("gives same-time recommendations DISTINCT operatories so they're independently bookable", () => {
+    // At 15:00 op-1 is taken by Smith's checkup; Pana and Jones must not BOTH
+    // be assigned op-2 — they should get different free rooms (op-2 and op-3).
+    const rec = agent.recommend(intent({ timeEarliest: "15:00" }), store, 3, opts);
+    const byStart = new Map<string, string[]>();
+    for (const s of rec.slots) {
+      const list = byStart.get(s.slot.start) ?? [];
+      list.push(s.slot.operatoryId);
+      byStart.set(s.slot.start, list);
+    }
+    for (const rooms of byStart.values()) {
+      expect(new Set(rooms).size).toBe(rooms.length); // no shared room at the same time
+    }
+  });
+
   it("flags bestEffort=false when a real match exists", () => {
     const rec = agent.recommend(intent({ timeEarliest: "15:00" }), store, 3, opts);
     expect(rec.bestEffort).toBe(false);

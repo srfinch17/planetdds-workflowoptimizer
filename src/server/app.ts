@@ -6,6 +6,7 @@ import type { CostTracker } from "../core/llm/costTracker";
 import type { CandidateSlot, AvailabilityRule } from "../core/types";
 import type { LlmClient } from "../core/llm/anthropicClient";
 import { parseRuleSentence } from "../core/rules/ruleParser";
+import { overlaps } from "../core/time";
 import { LatencyMeter } from "./metrics";
 
 /**
@@ -87,8 +88,19 @@ export function createApp(deps: AppDeps): Hono {
     const body = await c.req.json().catch(() => ({}));
     const slot = body.slot as CandidateSlot | undefined;
     const patientId = typeof body.patientId === "string" ? body.patientId : "";
-    if (!slot || !slot.providerId || !slot.start || !patientId) {
-      return c.json({ error: "slot and patientId are required" }, 400);
+    if (!slot || !slot.providerId || !slot.start || !slot.end || !patientId) {
+      return c.json({ error: "slot (with start/end) and patientId are required" }, 400);
+    }
+    // Re-validate at booking time: a recommendation set can contain overlapping
+    // options, and time passes between search and click. Never double-book a
+    // provider or an operatory.
+    const conflict = store.getAppointments().some(
+      (a) =>
+        (a.providerId === slot.providerId || a.operatoryId === slot.operatoryId) &&
+        overlaps(slot.start, slot.end, a.start, a.end),
+    );
+    if (conflict) {
+      return c.json({ error: "That slot was just taken — please pick another." }, 409);
     }
     const appointment = store.book(slot, patientId);
     return c.json({ appointment, appointments: store.getAppointments() });
