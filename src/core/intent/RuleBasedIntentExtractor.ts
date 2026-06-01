@@ -69,12 +69,37 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
 
     const first = results[0]!;
     const startDate = localDateStr(first.start.date());
-    // A range like "between Monday and Wednesday" gives an `end`; a single day
-    // doesn't. For a single day we pin earliest = latest to that one date.
-    const endDate = first.end ? localDateStr(first.end.date()) : startDate;
-    const daysOfWeek = [weekdayOf(`${startDate}T00:00:00`)];
 
-    return { earliestDate: startDate, latestDate: endDate, daysOfWeek, dateResolved: true };
+    // An explicit range ("between Mon and Wed") carries an end component.
+    if (first.end) {
+      return {
+        earliestDate: startDate,
+        latestDate: localDateStr(first.end.date()),
+        daysOfWeek: [],
+        dateResolved: true,
+      };
+    }
+
+    // A NAMED weekday ("next Thursday") is one specific day → pin it and
+    // constrain to that weekday so only that day is searched.
+    if (first.start.isCertain("weekday")) {
+      return {
+        earliestDate: startDate,
+        latestDate: startDate,
+        daysOfWeek: [weekdayOf(`${startDate}T00:00:00`)],
+        dateResolved: true,
+      };
+    }
+
+    // A relative SPAN ("next week"/"next month") points at the start of the
+    // span — widen latestDate and DON'T constrain the weekday, so the whole
+    // span is searched. Bare single days ("today"/"tomorrow") stay one day.
+    const matched = first.text.toLowerCase();
+    let latestDate = startDate;
+    if (/\bweek\b/.test(matched)) latestDate = addDaysStr(startDate, 6);
+    else if (/\bmonth\b/.test(matched)) latestDate = addDaysStr(startDate, 27);
+
+    return { earliestDate: startDate, latestDate, daysOfWeek: [], dateResolved: true };
   }
 }
 
@@ -87,9 +112,9 @@ function parseTimeWindow(text: string): {
   timeResolved: boolean;
 } {
   let partOfDay: "morning" | "afternoon" | "evening" | null = null;
-  if (/\bmorning\b/.test(text)) partOfDay = "morning";
-  else if (/\bafternoon\b/.test(text)) partOfDay = "afternoon";
-  else if (/\b(evening|night)\b/.test(text)) partOfDay = "evening";
+  if (/\bmornings?\b/.test(text)) partOfDay = "morning";
+  else if (/\bafternoons?\b/.test(text)) partOfDay = "afternoon";
+  else if (/\b(evenings?|nights?)\b/.test(text)) partOfDay = "evening";
 
   let timeEarliest: string | null = null;
   let timeLatest: string | null = null;
@@ -156,6 +181,11 @@ function parseProvider(text: string, store: ScheduleStore): string | null {
 
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function addDaysStr(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return localDateStr(d);
 }
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
