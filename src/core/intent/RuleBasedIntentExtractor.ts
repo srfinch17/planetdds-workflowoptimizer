@@ -1,16 +1,8 @@
 import * as chrono from "chrono-node";
 import type { ScheduleStore } from "../store/ScheduleStore";
 import type { SchedulingIntent, Urgency, Weekday } from "../types";
+import type { IntentContext, IntentExtractor } from "./IntentExtractor";
 import { weekdayOf } from "../time";
-
-/**
- * Everything the extractor needs from the outside world, passed in so the
- * extractor itself stays pure and easy to test.
- */
-export interface IntentContext {
-  refDate: string; // "YYYY-MM-DD" anchor for relative phrases ("next Thursday")
-  store: ScheduleStore; // for mapping provider names → ids
-}
 
 /**
  * The OFFLINE BRAIN — and the cost-saver.
@@ -24,7 +16,7 @@ export interface IntentContext {
  * `confidence` reports how much of the request it actually pinned down, so the
  * tiered layer can decide whether to escalate to the LLM.
  */
-export class RuleBasedIntentExtractor {
+export class RuleBasedIntentExtractor implements IntentExtractor {
   extract(request: string, ctx: IntentContext): SchedulingIntent {
     const text = request.toLowerCase();
 
