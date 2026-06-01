@@ -1,8 +1,9 @@
 # Intelligent Agentic Workflow Optimizer — Appointment Scheduling
 
 Turns an unstructured patient request — *"Can I come in next Thursday after 3?"* —
-into the **top-3 ranked, explainable appointment slots**, over a mock JSON
-schedule. Built for the Planet DDS take-home (Assignment 2).
+into the **top-3 ranked, explainable appointment slots** over a JSON-backed
+schedule. It coordinates two agents, prioritizes genuine emergencies, and keeps
+every decision consistent and explainable.
 
 ## What it does
 
@@ -37,7 +38,7 @@ Following Anthropic's *Building Effective Agents*:
 - **Schedule-Reasoning Agent** is fully deterministic: hard constraints filter
   candidates, then a weighted score ranks them.
 - The schedule lives behind a **`ScheduleStore` interface** (JSON today; Google
-  Calendar / an EHR / Planet DDS's own DB is a drop-in replacement).
+  Calendar, an EHR, or a practice-management database is a drop-in replacement).
 
 ## Three design goals, one design
 
@@ -102,11 +103,11 @@ back to the exact recommendation that produced it. The Admin dashboard surfaces
 a live activity feed, an activity chart, and aggregate counts; you can **export**
 the log (JSON/CSV), **replay** any logged request through the current code to
 check whether the result changed (a built-in regression check), and **clear** it
-(`npm run logs:reset` or the Admin button) to wipe dev/test noise before a demo.
+(`npm run logs:reset` or the Admin button) to wipe stale activity.
 
-> **PHI note:** events can contain raw patient messages (health information).
-> Fine for this mock-data demo; in production the log must be encrypted at rest,
-> access-controlled, retention-limited, and likely redacted.
+> **PHI note:** events can contain raw patient messages (health information). All
+> data here is mock, so this is safe; in production the log must be encrypted at
+> rest, access-controlled, retention-limited, and likely redacted.
 
 See **[API.md](./API.md)** for the full endpoint reference. The API is the
 product surface — the web app is one client; the engine is integration-ready
@@ -118,7 +119,7 @@ behind the `ScheduleStore` port (EHR/PMS/Google Calendar).
 ```bash
 npm install
 npm run cli -- "Can I come in next Thursday after 3?" --ref=2026-05-31
-npm run scenarios          # the three rehearsed demo stories
+npm run scenarios          # three end-to-end example runs
 npm test                   # full suite
 ```
 > `--ref=YYYY-MM-DD` pins the reference date; use `2026-05-31` so "next Thursday"
@@ -131,25 +132,11 @@ cd web && npm run dev      # frontend on :5173 (proxies /api → :3000)
 ```
 Open http://localhost:5173 — **Patient Intake** (request → ranked, explainable
 slots → book) and **Admin Dashboard** (live calendar, cost/efficiency metrics,
-plain-English rule teaching).
+plain-English rule teaching, and the activity log).
 
 **Going online (optional):** create `.env` with `ANTHROPIC_API_KEY=...` (it's
 gitignored). With a key present, ambiguous requests escalate to Haiku; without
 one, everything runs on the deterministic path for $0.
-
-## The defense cheat-sheet
-
-- **Agentic vs. a script?** Two agents reason over ambiguity; orchestration is a
-  workflow on purpose — autonomy is reserved for where it's actually needed.
-- **Consistent?** Ranking is deterministic code → identical output for identical
-  input.
-- **Cost?** Haiku + prompt caching + only-when-needed; the gap between requests
-  served and API calls is a measured number on the dashboard.
-- **API down?** The rule-based parser is the offline fallback.
-- **Trust the LLM?** Every response is validated against a Zod schema; failure →
-  fallback.
-- **Explainable?** Explanations are generated *from* the scoring factors, so
-  they're always faithful to the decision.
 
 ## Tech
 
