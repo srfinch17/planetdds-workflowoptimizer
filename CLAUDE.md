@@ -98,8 +98,20 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
   - LLM path is built + unit-tested with a FAKE client, but a REAL live API call has NOT been
     made yet (no key in dev env). **Tue night: set `.env` ANTHROPIC_API_KEY and run
     `npm run scenarios` with a genuinely ambiguous request to confirm the live `llm` path.**
-- [ ] **NEXT ACTION:** Start **Floor 3 — Task 15** (Hono backend API), then Task 16 (Vite/React
-  scaffold), 17 (intake view), 18 (live calendar). Continue **inline, with teaching**.
+- [x] **FLOOR 3 — Task 15 COMPLETE.** 55 tests passing (49 + 6 server).
+  - `src/server/app.ts` = `createApp(deps)` factory (DI: store, assistant, tiered, costTracker)
+    → testable in-process via `app.request()` (no socket). `src/server/index.ts` = the ONLY
+    file that reads `.env`/the API key + serves on a port (`@hono/node-server`, default 3000).
+  - Routes: `POST /api/schedule` {request, refDate?} → {intent, recommendation, pathTaken};
+    `GET /api/state` (calendar data); `GET /api/metrics` (requestsServed vs apiCalls, $); 
+    `POST /api/book` {slot, patientId}; `POST /api/rules` → 501 stub (Floor 5 wires it).
+  - Store is `persist:false` in the server → booking updates the in-memory calendar live but
+    never rewrites seed JSON (every demo cold-start is identical). Installed `@hono/node-server`.
+  - Run: `npm run server` (boots OFFLINE with no key — rules path, $0). Smoke-tested live:
+    Thu 6/4 3 PM, pathTaken=rules, apiCalls=0.
+- [ ] **NEXT ACTION:** **Task 16** (Vite + React scaffold in `web/`, dev proxy `/api` →
+  localhost:3000, Intake + Admin tabs), then 17 (intake view), 18 (live calendar) → Floor 3 done.
+  Continue **inline, with teaching**.
 - Execution mode chosen: **inline together** (NOT subagent-driven — Scott must see/own every step).
 - Git: local repo initialized on `main`, remote connected to
   `https://github.com/srfinch17/planetdds-workflowoptimizer.git`. Commits NOT pushed yet
