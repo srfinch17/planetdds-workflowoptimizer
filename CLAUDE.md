@@ -121,9 +121,38 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
   - Verified end-to-end THROUGH the Vite proxy: happy path, urgent best-effort, and a full
     book (appt-003 created, in-memory count 2→3). `npx tsc -b` clean. Browser automation was
     down so the VISUAL has not been eyeballed yet — open http://localhost:5173 to confirm.
-- [ ] **NEXT ACTION:** **Task 18** (live calendar grid in `web/src/components/Calendar.tsx`:
-  providers as columns, time rows, from GET /api/state; show appointments + grey rule blocks;
-  highlight recommended slots; booking updates the grid). Completes Floor 3. Inline + teaching.
+- [x] **FLOOR 3 COMPLETE** (Task 18). `web/src/components/Calendar.tsx` = hand-rolled day grid
+  (providers as columns, 30-min rows) from GET /api/state: background cells, closed/day-off
+  shading (honors per-provider hours + dayoff rules), rule blocks (lunch), booked appointments,
+  recommendation highlights. Mounted in Admin (day picker + refresh) and under Intake results
+  (highlights recommended slots; booking refreshes the grid). `npx tsc -b` clean. NOTE: the
+  full UI was never eyeballed in a browser this session (Chrome extension not connected) —
+  open http://localhost:5173 to confirm visuals before relying on them.
+- [x] **FLOOR 4 COMPLETE** (Tasks 19–20). `src/server/metrics.ts` LatencyMeter; GET /api/metrics
+  now returns requestsServed/apiCalls/freeHandled/freeSharePct/estimatedUsd/costPer1000Usd/
+  avgLatencyMs/pathCounts/tokenTotals. `web/src/components/Dashboard.tsx` = SVG donut (free vs
+  LLM), cost/1000 tile, speed tile (vs ~3 min manual baseline = 180_000ms), requests-served,
+  + per-provider utilization bars (client-side from /api/state). Mounted atop Admin calendar.
+- [x] **FLOOR 5 COMPLETE** (Tasks 21–23). 70 tests passing.
+  - Task 21: `src/core/rules/ruleSchema.ts` (Zod boundary + provider resolution) + `ruleParser.ts`
+    (regexParseRule offline-first → LLM fallback → Zod validate). LLM only translates; rule is data.
+  - Task 22: POST /api/rules live (parse → addRule → return rule + updated list; 422 on unparseable;
+    400 on empty). `web/src/components/RuleTeacher.tsx` in Admin (echoes parsed rule, reloads calendar).
+    index.ts shares one AnthropicClient across intent + rule translation.
+  - Task 23: real Agent Skill `src/core/skills/dental-triage/SKILL.md` (frontmatter + symptom→urgency
+    table) + `triage.ts` loader/classifier. RuleBasedIntentExtractor takes optional skill (combines
+    with timing keywords, more-severe wins); server + scenarios load it. `tests/triage.test.ts` proves
+    the swap-skill flex (tests/fixtures/conservative-triage). README written (also covers Task 24).
+- [x] **ALL FLOORS COMPLETE. Build done.** 70 tests green. `npm run scenarios` = 3 served, 0 API
+  calls, $0. Full web app (intake + admin dashboard + live calendar + NL rule teaching + triage skill).
+- [ ] **REMAINING (not building — verification + delivery):**
+  1. **Push to GitHub** — commits are LOCAL only; needs Scott's auth (ASK before pushing).
+  2. **Eyeball the UI** at http://localhost:5173 (never visually checked — Chrome ext not connected).
+  3. **Tue night**: set `.env` ANTHROPIC_API_KEY, run an ambiguous request to confirm the live `llm`
+     path fires (path=llm, cost>0); full cold-start dry run on the demo laptop (Node+Git+VS Code →
+     git clone → npm install (root AND web/) → npm run server + cd web && npm run dev → .env).
+- Known simplification (defense): candidateGenerator still doesn't filter provider role/specialty vs
+  appointment type (a hygienist can surface for an emergency). Honest, easy future hard-constraint.
 - Execution mode chosen: **inline together** (NOT subagent-driven — Scott must see/own every step).
 - Git: local repo initialized on `main`, remote connected to
   `https://github.com/srfinch17/planetdds-workflowoptimizer.git`. Commits NOT pushed yet
