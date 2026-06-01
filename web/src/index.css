@@ -1,0 +1,62 @@
+/* Base reset + design tokens. One clinical palette, used everywhere. */
+:root {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --ink: #1a2433;
+  --ink-soft: #5a6677;
+  --line: #e2e8f1;
+  --brand: #1f6feb;
+  --brand-dark: #1857c0;
+  --good: #1f9d63;
+  --good-bg: #e7f5ee;
+  --warn: #c47d12;
+  --warn-bg: #fbf1de;
+  --bad: #c2392f;
+  --shadow: 0 1px 2px rgba(16, 30, 54, 0.06), 0 4px 16px rgba(16, 30, 54, 0.06);
+  --radius: 10px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 650;
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 0.9em;
+  background: #eef2f8;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
