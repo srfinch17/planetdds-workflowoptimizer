@@ -80,7 +80,12 @@ describe("Hono backend API", () => {
     const body = await res.json();
     expect(body.requestsServed).toBeGreaterThanOrEqual(1);
     expect(body.apiCalls).toBe(0); // offline → rules path only
+    expect(body.freeHandled).toBe(body.requestsServed); // everything was free
+    expect(body.freeSharePct).toBe(100);
     expect(body.estimatedUsd).toBe(0);
+    expect(body.costPer1000Usd).toBe(0);
+    expect(typeof body.avgLatencyMs).toBe("number");
+    expect(body.avgLatencyMs).toBeGreaterThanOrEqual(0);
     expect(body.pathCounts).toBeDefined();
   });
 

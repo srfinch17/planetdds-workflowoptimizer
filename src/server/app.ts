@@ -4,6 +4,7 @@ import type { SchedulingAssistant } from "../core/orchestrator/SchedulingAssista
 import type { TieredIntentExtractor } from "../core/intent/TieredIntentExtractor";
 import type { CostTracker } from "../core/llm/costTracker";
 import type { CandidateSlot } from "../core/types";
+import { LatencyMeter } from "./metrics";
 
 /**
  * Everything the HTTP layer needs, injected. Nothing here knows about ports,
@@ -25,6 +26,7 @@ export interface AppDeps {
 export function createApp(deps: AppDeps): Hono {
   const { store, assistant, tiered, costTracker } = deps;
   const app = new Hono();
+  const latency = new LatencyMeter(); // how fast we answer, server-side
 
   // Turn an unstructured patient request into ranked, explainable slots.
   // refDate is optional so the demo can pin "today" for reproducible scenarios.
@@ -36,7 +38,9 @@ export function createApp(deps: AppDeps): Hono {
     }
     const refDate = typeof body.refDate === "string" ? body.refDate : undefined;
 
+    const t0 = performance.now();
     const { intent, recommendation } = await assistant.handle(request, { refDate });
+    latency.record(performance.now() - t0);
     // tiered.lastPath was just set by this exact call — surfaces the cost story.
     return c.json({ intent, recommendation, pathTaken: tiered.lastPath });
   });
@@ -53,15 +57,24 @@ export function createApp(deps: AppDeps): Hono {
     });
   });
 
-  // Cost/efficiency snapshot. requestsServed vs apiCalls IS the savings number.
+  // Cost/efficiency snapshot. requestsServed vs apiCalls IS the savings number,
+  // and costPer1000 projects the current mix out to a relatable scale.
   app.get("/api/metrics", (c) => {
     const counts = tiered.pathCounts;
     const requestsServed = counts.rules + counts.llm + counts["offline-fallback"] + counts["llm-failed-fallback"];
+    const apiCalls = counts.llm; // only the llm path actually hits Anthropic
+    const freeHandled = requestsServed - apiCalls;
+    const usd = costTracker.usd;
     return c.json({
       requestsServed,
-      apiCalls: counts.llm, // only the llm path actually hits Anthropic
+      apiCalls,
+      freeHandled,
+      freeSharePct: requestsServed === 0 ? 0 : Math.round((freeHandled / requestsServed) * 100),
       pathCounts: counts,
-      estimatedUsd: costTracker.usd,
+      estimatedUsd: usd,
+      // Projected spend per 1,000 requests at the mix seen so far.
+      costPer1000Usd: requestsServed === 0 ? 0 : (usd / requestsServed) * 1000,
+      avgLatencyMs: Math.round(latency.avgMs * 10) / 10,
       tokenTotals: costTracker.totals,
     });
   });
