@@ -479,6 +479,145 @@
   border-color: #f3c2bd;
 }
 
+/* ---------- log panel ---------- */
+
+.btn--sm {
+  padding: 5px 10px;
+  font-size: 12.5px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.btn--danger {
+  color: var(--bad);
+  border-color: #f3c2bd;
+}
+.btn--danger:hover {
+  background: #fdecea;
+}
+
+.logpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.logpanel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.logpanel__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.log-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.log-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 90px;
+  padding: 6px 4px 0;
+  background: #f7fafe;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.log-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 26px;
+  height: 100%;
+}
+.log-bar__fill {
+  width: 18px;
+  min-height: 2px;
+  background: linear-gradient(180deg, var(--brand), var(--brand-dark));
+  border-radius: 3px 3px 0 0;
+}
+.log-bar__label {
+  font-size: 9px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
+.log-totals {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.log-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chip--active {
+  background: #e7effd;
+  color: var(--brand);
+  border-color: #c5dbfb;
+}
+
+.replay-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.log-row {
+  display: grid;
+  grid-template-columns: 78px 78px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid #eef2f8;
+  font-size: 12.5px;
+}
+.log-time {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.log-type {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+.log-row--escalation .log-type {
+  color: var(--bad);
+}
+.log-row--booking .log-type {
+  color: var(--good);
+}
+.log-row--error .log-type {
+  color: var(--bad);
+}
+.log-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- calendar ---------- */
 
 .calendar-panel {

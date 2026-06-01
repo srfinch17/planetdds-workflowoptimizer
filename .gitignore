@@ -12,5 +12,6 @@ web/dist/
 
 # Logs / OS cruft
 *.log
+logs/
 .DS_Store
 Thumbs.db

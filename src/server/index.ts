@@ -15,17 +15,22 @@ import { CostTracker } from "../core/llm/costTracker";
 import { ScheduleReasoningAgent } from "../core/schedule/ScheduleReasoningAgent";
 import { SchedulingAssistant } from "../core/orchestrator/SchedulingAssistant";
 import { loadDefaultTriageSkill } from "../core/skills/triage";
+import { JsonlEventLog } from "../core/log/eventLog";
 import type { IntentExtractor } from "../core/intent/IntentExtractor";
 
 // This is the ONLY place the API key is read. It stays in this process; the
 // browser talks to these routes, never to Anthropic directly.
 const DATA_DIR = fileURLToPath(new URL("../core/data", import.meta.url));
+const LOG_FILE = fileURLToPath(new URL("../../logs/events.jsonl", import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
 
 // persist:false → booking updates the in-memory calendar live during the demo
 // but never rewrites the seed JSON, so every fresh start is identical.
 const store = new JsonScheduleStore(DATA_DIR, { persist: false });
 const costTracker = new CostTracker();
+// The event log DOES persist across restarts (audit trail). `npm run logs:reset`
+// or the Admin "Clear logs" button wipes dev/test noise before a demo.
+const eventLog = new JsonlEventLog({ filePath: LOG_FILE });
 
 // Online only when a NON-EMPTY key is present and offline isn't forced. A
 // whitespace/empty key counts as no key. Otherwise the LLM extractor is a
@@ -50,7 +55,7 @@ const triageSkill = loadDefaultTriageSkill();
 const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(triageSkill), llm, { offline });
 const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store, 3, triageSkill);
 
-const app = createApp({ store, assistant, tiered, costTracker, ruleLlm: client ?? undefined });
+const app = createApp({ store, assistant, tiered, costTracker, eventLog, ruleLlm: client ?? undefined });
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log("");

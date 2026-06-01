@@ -11,6 +11,7 @@ import { Calendar } from '../components/Calendar'
 import { Dashboard } from '../components/Dashboard'
 import { RuleTeacher } from '../components/RuleTeacher'
 import { CallbackQueue } from '../components/CallbackQueue'
+import { LogPanel } from '../components/LogPanel'
 
 // The seed calendar has its appointments on this Thursday — a sensible default
 // so the grid opens with something to look at.
@@ -82,6 +83,8 @@ export function Admin() {
       {state && (
         <Calendar providers={state.providers} appointments={state.appointments} rules={state.rules} day={day} />
       )}
+
+      <LogPanel />
     </div>
   )
 }

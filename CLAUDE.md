@@ -156,7 +156,22 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
     queue; `GET /api/callbacks`; metrics `emergencyCallbacks`. UI: red/amber banner on Intake;
     `CallbackQueue` panel on Admin. Scenario 4 (emergency) added to `npm run scenarios`.
   - 81 tests (added 9). Verified live: emergency→911 directive+queue, callback→ASAP, normal→none.
-- [x] **QA PASS DONE (81 tests green; `npm run typecheck` clean; web build clean).** Verified live:
+- [x] **LOGGING / OBSERVABILITY ADDED (Scott's request, Full scope).** 92 tests green.
+  - `src/core/log/eventLog.ts`: `EventLog` port + `JsonlEventLog` (in-memory buffer + JSONL file
+    at `logs/events.jsonl`, gitignored). Event types: schedule_request, escalation, booking,
+    rule_added, error. Each has {id, ts, type, correlationId?, data}. PHI-flagged in code + README.
+  - Server logs every action; booking carries correlationId back to its schedule_request.
+    Endpoints: GET /api/logs(?type=&limit=), GET /api/logs/stats, POST /api/logs/replay (re-run
+    a logged request, diff vs current → regression check), GET /api/logs/export?format=json|csv,
+    POST /api/logs/reset. app.onError logs errors. /api/schedule now returns requestId.
+  - UI: `LogPanel` on Admin (activity feed w/ type filters, per-minute bar chart, totals pills,
+    export JSON/CSV, Clear logs w/ confirm, per-request Replay). Persists across restarts;
+    `npm run logs:reset` or the button wipes it.
+  - **`API.md`** written — full endpoint reference + versioning/auth/persistence as roadmap.
+  - Architecture decision (discussed): project is already API-first (ports+adapters); core is
+    pure, server is a thin adapter, web/CLI/tests are clients. Did NOT add /v1 or a separate
+    logging microservice (over-engineering for the demo) — those are spoken roadmap.
+- [x] **QA PASS DONE (92 tests green; `npm run typecheck` clean; web build clean).** Verified live:
   3 demo scenarios (all free rules path; #3 urgent+bestEffort), vague request → live `llm` path
   ($0.0008/call), all error paths (400/404/409/422), rule-teaching enforced, triage drives urgency.
   Fixes found+made this pass:

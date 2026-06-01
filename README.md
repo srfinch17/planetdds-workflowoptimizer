@@ -92,6 +92,26 @@ one on the callback), and pushes the request onto a **staff callback queue**
 (`GET /api/callbacks`, shown on the Admin dashboard). It's deterministic and
 works offline — a genuine emergency never depends on the LLM being reachable.
 
+## Observability & audit log
+
+Every meaningful action is recorded to an append-only event log
+(`schedule_request`, `escalation`, `booking`, `rule_added`, `error`) behind an
+`EventLog` interface — JSONL on disk here (`logs/events.jsonl`), a database or
+log pipeline in production. Each event has a correlation id, so a booking traces
+back to the exact recommendation that produced it. The Admin dashboard surfaces
+a live activity feed, an activity chart, and aggregate counts; you can **export**
+the log (JSON/CSV), **replay** any logged request through the current code to
+check whether the result changed (a built-in regression check), and **clear** it
+(`npm run logs:reset` or the Admin button) to wipe dev/test noise before a demo.
+
+> **PHI note:** events can contain raw patient messages (health information).
+> Fine for this mock-data demo; in production the log must be encrypted at rest,
+> access-controlled, retention-limited, and likely redacted.
+
+See **[API.md](./API.md)** for the full endpoint reference. The API is the
+product surface — the web app is one client; the engine is integration-ready
+behind the `ScheduleStore` port (EHR/PMS/Google Calendar).
+
 ## How to run
 
 **CLI (no key needed — runs offline):**

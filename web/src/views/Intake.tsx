@@ -85,7 +85,7 @@ export function Intake() {
   async function book(s: ScoredSlot) {
     if (!patientId) return
     try {
-      await postBook(s.slot, patientId)
+      await postBook(s.slot, patientId, result?.requestId)
       setBooked((b) => ({ ...b, [slotKey(s)]: true }))
       loadState() // refresh the calendar so the new appointment appears
     } catch (e) {

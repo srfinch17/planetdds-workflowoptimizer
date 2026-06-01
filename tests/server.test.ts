@@ -8,6 +8,7 @@ import { ScheduleReasoningAgent } from "../src/core/schedule/ScheduleReasoningAg
 import { SchedulingAssistant } from "../src/core/orchestrator/SchedulingAssistant";
 import { CostTracker } from "../src/core/llm/costTracker";
 import { loadDefaultTriageSkill } from "../src/core/skills/triage";
+import { JsonlEventLog } from "../src/core/log/eventLog";
 import type { Hono } from "hono";
 
 const DATA_DIR = fileURLToPath(new URL("../src/core/data", import.meta.url));
@@ -26,7 +27,8 @@ function buildApp(): { app: Hono; tiered: TieredIntentExtractor } {
   const skill = loadDefaultTriageSkill();
   const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(skill), llm, { offline: true });
   const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store, 3, skill);
-  const app = createApp({ store, assistant, tiered, costTracker });
+  const eventLog = new JsonlEventLog({}); // memory-only: no file writes in tests
+  const app = createApp({ store, assistant, tiered, costTracker, eventLog });
   return { app, tiered };
 }
 
@@ -194,5 +196,69 @@ describe("Hono backend API", () => {
     expect(body.appointment).toBeDefined();
     expect(body.appointment.patientId).toBe("pat-doe");
     expect(body.appointments.length).toBe(before.appointments.length + 1);
+  });
+
+  it("logs a schedule_request and exposes it via GET /api/logs (+ stats)", async () => {
+    const sched = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "cleaning next Thursday", refDate: "2026-05-31" }),
+    });
+    const { requestId } = (await sched.json()) as any;
+    expect(requestId).toBeTruthy();
+
+    const logs = (await (await app.request("/api/logs?type=schedule_request")).json()) as any;
+    expect(logs.events.length).toBe(1);
+    expect(logs.events[0].id).toBe(requestId);
+    expect(logs.events[0].data.request).toContain("cleaning");
+
+    const stats = (await (await app.request("/api/logs/stats")).json()) as any;
+    expect(stats.byType.schedule_request).toBe(1);
+  });
+
+  it("links a booking to its originating request via correlationId", async () => {
+    const sched = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "next Thursday after 3", refDate: "2026-05-31" }),
+    });
+    const { recommendation, requestId } = (await sched.json()) as any;
+    await app.request("/api/book", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot: recommendation.slots[0].slot, patientId: "pat-doe", requestId }),
+    });
+    const logs = (await (await app.request("/api/logs?type=booking")).json()) as any;
+    expect(logs.events[0].correlationId).toBe(requestId);
+    expect(logs.events[0].data.outcome).toBe("booked");
+  });
+
+  it("replays a logged request and reports whether the result changed", async () => {
+    const sched = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "next Thursday after 3", refDate: "2026-05-31" }),
+    });
+    const { requestId } = (await sched.json()) as any;
+    const res = await app.request("/api/logs/replay", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: requestId }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.changed).toBe(false); // same code, same data → identical
+    expect(body.current.recommendations.length).toBeGreaterThan(0);
+  });
+
+  it("POST /api/logs/reset clears the log", async () => {
+    await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "cleaning", refDate: "2026-05-31" }),
+    });
+    await app.request("/api/logs/reset", { method: "POST" });
+    const stats = (await (await app.request("/api/logs/stats")).json()) as any;
+    expect(stats.total).toBe(0);
   });
 });

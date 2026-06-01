@@ -65,6 +65,35 @@ export interface ScheduleResponse {
   recommendation: Recommendation
   pathTaken: IntentPath
   escalation: Escalation
+  requestId: string
+}
+
+export type EventType = 'schedule_request' | 'escalation' | 'booking' | 'rule_added' | 'error'
+
+export interface LogEvent {
+  id: string
+  ts: string
+  type: EventType
+  correlationId?: string
+  data: Record<string, unknown>
+}
+
+export interface LogStats {
+  total: number
+  byType: Record<string, number>
+  byPath: Record<string, number>
+  escalations: { emergency: number; callback: number }
+  bookings: { booked: number; conflict: number }
+  errors: number
+  perMinute: { t: string; count: number }[]
+}
+
+export interface ReplayResult {
+  request: string
+  refDate: string | null
+  original: { recommendations: unknown[]; escalationLevel: string }
+  current: { recommendations: { start: string; providerId: string; operatoryId: string; score: number }[]; escalationLevel: string }
+  changed: boolean
 }
 
 export interface CallbackRecord {
@@ -192,13 +221,41 @@ export function postRule(
 export function postBook(
   slot: CandidateSlot,
   patientId: string,
+  requestId?: string,
 ): Promise<{ appointment: Appointment; appointments: Appointment[] }> {
   return fetch('/api/book', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ slot, patientId }),
+    body: JSON.stringify({ slot, patientId, requestId }),
   }).then((r) => jsonOrThrow(r))
 }
+
+export function getLogs(type?: EventType, limit = 100): Promise<{ events: LogEvent[] }> {
+  const q = new URLSearchParams()
+  if (type) q.set('type', type)
+  q.set('limit', String(limit))
+  return fetch(`/api/logs?${q}`).then((r) => jsonOrThrow<{ events: LogEvent[] }>(r))
+}
+
+export function getLogStats(): Promise<LogStats> {
+  return fetch('/api/logs/stats').then((r) => jsonOrThrow<LogStats>(r))
+}
+
+export function replayLog(id: string): Promise<ReplayResult> {
+  return fetch('/api/logs/replay', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id }),
+  }).then((r) => jsonOrThrow<ReplayResult>(r))
+}
+
+export function resetLogs(): Promise<{ ok: boolean }> {
+  return fetch('/api/logs/reset', { method: 'POST' }).then((r) => jsonOrThrow<{ ok: boolean }>(r))
+}
+
+// Export is a direct download link (Vite proxies it to the backend).
+export const LOG_EXPORT_JSON = '/api/logs/export?format=json'
+export const LOG_EXPORT_CSV = '/api/logs/export?format=csv'
 
 // --- formatting helpers (slot.start is local ISO "YYYY-MM-DDTHH:mm:ss") ---
 
