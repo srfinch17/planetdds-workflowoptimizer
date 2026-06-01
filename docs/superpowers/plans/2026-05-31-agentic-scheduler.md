@@ -10,25 +10,25 @@
 
 ---
 
-## Why this design wins (defense cheat-sheet)
+## Why this design works
 
-Keep these talking points in your head — they answer the questions the panel will actually ask.
+The core principles behind the system:
 
-1. **"What makes this agentic, not a script?"** — Two specialist agents reason over ambiguity (language interpretation, constraint trade-offs). The orchestration is a *workflow* (fixed path) because the steps never branch — and per Anthropic's "Building Effective Agents," you use a workflow when control flow is fixed and reserve agentic autonomy for where it's needed. Drawing that line is a deliberate judgment call, not a limitation.
-2. **"How is it consistent?"** (a stated requirement) — Ranking is pure deterministic code. Same request + same schedule → identical recommendations every time. An LLM alone can't guarantee that.
-3. **"How is it cost-effective?"** — The LLM (cheap Haiku model) is called only when the deterministic parser can't fully resolve a request. The dashboard shows the % of requests handled for free and the est. cost per 1,000 requests.
-4. **"What if the API is down?"** — The rule-based parser *is* the offline mode. Graceful degradation is built into the foundation (Tiered extractor), not bolted on.
-5. **"How do you trust the LLM's output?"** — Every LLM response is validated against a Zod schema. The LLM is treated as an untrusted input boundary; validation failure triggers the deterministic fallback.
-6. **"How is it explainable?"** (a stated requirement) — Explanations are generated from the actual scoring factors, so they're always faithful to the real decision — not narrated after the fact by an LLM.
-7. **Future extensibility** — The schedule data sits behind a `ScheduleStore` interface; swapping mock JSON for Google Calendar / an EHR / Planet DDS's own DB is a drop-in change. Practice-specific clinical judgment (urgency triage) lives in a swappable Agent Skill.
+1. **Agentic, not a script.** Two specialist agents reason over ambiguity (language interpretation, constraint trade-offs). The orchestration is a *workflow* (fixed path) because the steps never branch — per Anthropic's "Building Effective Agents," use a workflow when control flow is fixed and reserve agentic autonomy for where it's needed. Drawing that line is a deliberate judgment call, not a limitation.
+2. **Consistent.** Ranking is pure deterministic code. Same request + same schedule → identical recommendations every time. An LLM alone can't guarantee that.
+3. **Cost-effective.** The LLM (cheap Haiku model) is called only when the deterministic parser can't fully resolve a request. The dashboard shows the % of requests handled for free and the est. cost per 1,000 requests.
+4. **Resilient when the API is down.** The rule-based parser *is* the offline mode. Graceful degradation is built into the foundation (Tiered extractor), not bolted on.
+5. **Trustworthy LLM output.** Every LLM response is validated against a Zod schema. The LLM is treated as an untrusted input boundary; validation failure triggers the deterministic fallback.
+6. **Explainable.** Explanations are generated from the actual scoring factors, so they're always faithful to the real decision — not narrated after the fact by an LLM.
+7. **Extensible.** The schedule data sits behind a `ScheduleStore` interface; swapping mock JSON for Google Calendar, an EHR, or a practice-management DB is a drop-in change. Practice-specific clinical judgment (urgency triage) lives in a swappable Agent Skill.
 
-**Honesty guardrail (do not blur this in the demo):** Hard availability constraints ("Dr. Pana never works Fridays") are stored as **structured data** and enforced deterministically — never delegated to an LLM's memory. The LLM only *translates* an admin's English sentence into that structured rule. A real Agent **Skill** is reserved for genuinely *fuzzy* judgment (clinical urgency triage), not hard rules.
+**Honesty guardrail (do not blur this distinction):** Hard availability constraints ("Dr. Pana never works Fridays") are stored as **structured data** and enforced deterministically — never delegated to an LLM's memory. The LLM only *translates* an admin's English sentence into that structured rule. A real Agent **Skill** is reserved for genuinely *fuzzy* judgment (clinical urgency triage), not hard rules.
 
 ---
 
 ## Build Floors (always-demoable layering)
 
-Each floor leaves a complete, demoable system. If time runs out, stop at the last finished floor.
+Each floor leaves a complete, working system. The floors are sequential; each builds on the last.
 
 | Floor | Delivers | Tasks |
 |-------|----------|-------|
@@ -38,8 +38,6 @@ Each floor leaves a complete, demoable system. If time runs out, stop at the las
 | **3** | Hono backend + React/Vite UI with live calendar | T15–T18 |
 | **4** | Admin dashboard: cost/efficiency metrics + utilization | T19–T20 |
 | **5** | NL "teach a rule" feature + dental-triage Agent Skill flex | T21–T23 |
-
-**Timeline mapping:** Floor 0–1 tonight (Sun). Floor 2 + start Floor 3 Monday. Floors 3–5 Tuesday. Tuesday night = laptop setup + practice (hard stop on building).
 
 ---
 
@@ -259,7 +257,7 @@ git remote add origin https://github.com/srfinch17/planetdds-workflowoptimizer.g
 git add package.json tsconfig.json vitest.config.ts .gitignore .env.example
 git commit -m "chore: project skeleton, tooling, and secrets hygiene"
 ```
-**Defense note:** Explain why `.env` is gitignored from commit #1 — a leaked key in a public repo is the one genuinely embarrassing mistake.
+**Design note:** Explain why `.env` is gitignored from commit #1 — a leaked key in a public repo is the one genuinely embarrassing mistake.
 
 ### Task 2: Seed mock data
 
@@ -332,7 +330,7 @@ export interface ScheduleStore {
 - [ ] **Step 4:** Implement `JsonScheduleStore` — constructor takes a data directory path, reads the 6 JSON files into memory. `book`/`addRule` mutate in-memory arrays AND write back to disk (so the demo calendar updates live). Generate ids with a counter + prefix.
 - [ ] **Step 5:** Run → PASS.
 - [ ] **Step 6: Commit** `git commit -am "feat: ScheduleStore interface + JSON-backed implementation"`
-**Defense note:** The interface is the "future integration point" — Google Calendar/EHR slot in here unchanged.
+**Design note:** The interface is the "future integration point" — Google Calendar/EHR slot in here unchanged.
 
 ### Task 6: Candidate generator — HARD constraints (TDD)
 
@@ -372,7 +370,7 @@ Deterministic weighted scoring. Produces the `factors` + human `explanation`.
   Sum contributions → `score` (0..100 normalized). Build `explanation` by joining the `detail` strings of matched factors into one plain-English sentence.
 - [ ] **Step 4:** Run → PASS.
 - [ ] **Step 5: Commit** `git commit -am "feat: deterministic weighted slot scoring with explanations"`
-**Defense note:** Explanations are derived from the same factors that drive the score — guaranteed faithful.
+**Design note:** Explanations are derived from the same factors that drive the score — guaranteed faithful.
 
 ### Task 8: ScheduleReasoningAgent — rank top N (TDD)
 
@@ -395,7 +393,7 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 - [ ] **Step 3:** Implement using `chrono.parse(request, refDate)` to extract dates/times; map parsed time to `timeEarliest`/`timeLatest` (e.g., "after 3" → earliest 15:00; "before noon" → latest 12:00; "morning/afternoon/evening" → partOfDay). Keyword tables: urgency (`pain|killing|emergency|asap|today|broken` → urgent), type (`clean|cleaning` → cleaning, `tooth|ache|hurt` → emergency, etc.), provider names → ids. Set `confidence` based on how many fields were resolved.
 - [ ] **Step 4:** Run → PASS.
 - [ ] **Step 5: Commit** `git commit -am "feat: deterministic rule-based intent extraction (offline path)"`
-**Defense note:** This single class is your offline mode *and* your cost-saver — same code serves both.
+**Design note:** This single class is your offline mode *and* your cost-saver — same code serves both.
 
 ### Task 10: Orchestrator + CLI (Floor 1 demoable!) (TDD + manual)
 
@@ -407,7 +405,7 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 - [ ] **Step 4:** Run test → PASS. Then manual: `npm run cli -- "Can I come in next Thursday after 3?"` and eyeball the output.
 - [ ] **Step 5: Commit** `git commit -am "feat: scheduling assistant orchestrator + CLI (Floor 1 complete)"`
 
-> **FLOOR 1 COMPLETE.** You now satisfy the entire assignment with a working CLI. Everything below is upside.
+> **FLOOR 1 COMPLETE.** A complete, working CLI delivering the core feature. Everything below is upside.
 
 ### Task 11: Zod intent schema + validation (TDD)
 
@@ -428,7 +426,7 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 - [ ] **Step 3:** Implement `anthropicClient` wrapping `@anthropic-ai/sdk` with **prompt caching** on the system prompt (the schema/instructions are constant — cache them to cut cost), model from `ANTHROPIC_MODEL`. Use a tool/JSON-structured prompt that asks Claude to return the intent fields. Pipe the raw text through `parseIntent` (Task 11). `costTracker` maps token counts → USD using Haiku pricing constants. `LlmIntentExtractor` calls the client, validates, stamps `source: "llm"`.
 - [ ] **Step 4:** Run → PASS.
 - [ ] **Step 5: Commit** `git commit -am "feat: LLM intent extractor with Zod validation, prompt caching, cost tracking"`
-**Defense note:** Prompt caching + Haiku + only-when-needed = the three cost levers, all visible.
+**Design note:** Prompt caching + Haiku + only-when-needed = the three cost levers, all visible.
 
 ### Task 13: TieredIntentExtractor — graceful degradation (TDD)
 
@@ -451,7 +449,7 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 - [ ] **Step 2:** Run → PASS (scenarios 1 & 3 work offline; scenario 2 may use LLM — gate it so the test passes offline by asserting structure, not exact LLM text).
 - [ ] **Step 3: Commit** `git commit -am "feat: three canonical demo scenarios (happy, ambiguous, urgent best-effort)"`
 
-> **FLOOR 2 COMPLETE.** Robust, validated, offline-capable, with a rehearsed demo narrative.
+> **FLOOR 2 COMPLETE.** Robust, validated, offline-capable, with three example scenarios.
 
 ### Task 15: Hono backend API
 
@@ -466,7 +464,7 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
   The API key stays server-side here — **never** sent to the browser.
 - [ ] **Step 2:** Manual check: `npm run server`, curl `POST /api/schedule`.
 - [ ] **Step 3: Commit** `git commit -am "feat: Hono backend API wrapping the scheduling core"`
-**Defense note:** Why a backend at all? Because the API key must never live in browser code.
+**Design note:** Why a backend at all? Because the API key must never live in browser code.
 
 ### Task 16: Vite + React app scaffold
 
@@ -488,11 +486,11 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 
 **Files:** `web/src/components/Calendar.tsx`
 
-- [ ] **Step 1:** Render a day/week grid (providers as columns, time as rows) from `GET /api/state`. Show existing appointments as blocks and grey out rule blocks (lunch / days off). When recommendations return, highlight the recommended slots on the grid. Hand-rolled grid (no heavy calendar dep) for demo robustness.
+- [ ] **Step 1:** Render a day/week grid (providers as columns, time as rows) from `GET /api/state`. Show existing appointments as blocks and grey out rule blocks (lunch / days off). When recommendations return, highlight the recommended slots on the grid. Hand-rolled grid (no heavy calendar dep) for robustness.
 - [ ] **Step 2:** Manual check: booking a slot updates the grid.
 - [ ] **Step 3: Commit** `git commit -am "feat: live calendar grid with recommendation highlighting"`
 
-> **FLOOR 3 COMPLETE.** The showy, mind-blowing UI is live.
+> **FLOOR 3 COMPLETE.** The full UI is live.
 
 ### Task 19: Cost/efficiency metrics tracking
 
@@ -506,10 +504,10 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 **Files:** `web/src/views/Admin.tsx`, chart components.
 
 - [ ] **Step 1:** Dashboard tiles: donut of rules-handled (free) vs LLM; "est. cost / 1,000 requests"; avg time-to-recommendation vs a manual baseline; provider utilization bars. Lightweight charts (hand-rolled SVG or a tiny chart lib).
-- [ ] **Step 2:** Manual check with execs-eye polish.
+- [ ] **Step 2:** Manual check with attention to polish.
 - [ ] **Step 3: Commit** `git commit -am "feat: admin dashboard with cost + utilization metrics"`
 
-> **FLOOR 4 COMPLETE.** The exec-bait dashboard is done.
+> **FLOOR 4 COMPLETE.** The management dashboard is done.
 
 ### Task 21: AvailabilityRule schema + NL rule parser (TDD)
 
@@ -520,7 +518,7 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 - [ ] **Step 3:** Implement `parseRuleSentence(sentence, store)`: LLM call (reuse anthropicClient) → JSON → Zod validate → resolve provider name to id. Offline fallback: regex for the two common patterns (block with times, dayoff with weekday). On low confidence, return an error the UI surfaces as "couldn't parse — try rephrasing."
 - [ ] **Step 4:** Run → PASS.
 - [ ] **Step 5: Commit** `git commit -am "feat: natural-language to structured availability rule parser"`
-**Defense note (CRITICAL framing):** The LLM only *translates* the sentence; the resulting rule is structured data the deterministic scheduler enforces every time. Hard constraints are never left to LLM memory.
+**Design note (CRITICAL):** The LLM only *translates* the sentence; the resulting rule is structured data the deterministic scheduler enforces every time. Hard constraints are never left to LLM memory.
 
 ### Task 22: Wire NL rule into API + Admin UI
 
@@ -530,7 +528,7 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 - [ ] **Step 2:** Manual demo check.
 - [ ] **Step 3: Commit** `git commit -am "feat: admins teach scheduling rules in plain English (live)"`
 
-### Task 23: Dental-triage Agent Skill flex
+### Task 23: Dental-triage Agent Skill
 
 **Files:** Create `src/core/skills/dental-triage/SKILL.md`; reference it from the urgency-triage path.
 
@@ -539,19 +537,19 @@ Uses `chrono-node` for date/time parsing + keyword matching for urgency/type/pro
 - [ ] **Step 3:** Add a short README section explaining the skill as the "extensible intelligence" layer and how it differs from hard rules.
 - [ ] **Step 4: Commit** `git commit -am "feat: dental-triage Agent Skill as extensible clinical-judgment layer"`
 
-> **FLOOR 5 COMPLETE.** Full system: agentic, cheap, offline-capable, explainable, with a live UI, an exec dashboard, plain-English rule teaching, and a genuine Agent Skill flex.
+> **FLOOR 5 COMPLETE.** Full system: agentic, cheap, offline-capable, explainable, with a live UI, a management dashboard, plain-English rule teaching, and a genuine Agent Skill.
 
 ---
 
 ## README (write last, Task 24)
 
-A crisp README is itself a deliverable the panel may read. Include: the architecture diagram (orchestrator + 2 agents), how to run (CLI + web), the cost/offline design rationale, the rule-vs-skill distinction, and "future integrations" (Google Calendar/EHR behind ScheduleStore). Commit: `docs: README with architecture, run instructions, and design rationale`.
+A crisp README is an important deliverable. Include: the architecture diagram (orchestrator + 2 agents), how to run (CLI + web), the cost/offline design rationale, the rule-vs-skill distinction, and "future integrations" (Google Calendar/EHR behind ScheduleStore). Commit: `docs: README with architecture, run instructions, and design rationale`.
 
 ---
 
-## Self-Review vs Spec
+## Self-Review vs Requirements
 
-| Spec requirement | Covered by |
+| Requirement | Covered by |
 |---|---|
 | Accept unstructured requests | Task 10 CLI, Task 17 Intake UI |
 | LLM/NLP agent extracts intent/constraints/preferences (incl. urgency) | Tasks 9, 11, 12, 13 |
@@ -563,4 +561,4 @@ A crisp README is itself a deliverable the panel may read. Include: the architec
 | Consistent, explainable decisions | Deterministic scoring (Task 7), faithful explanations |
 | Mock data (CSV/JSON) | Task 2 (JSON) |
 
-**Gaps:** none against the spec. Floors 3–5 are upside beyond the minimum (which Floor 1 already satisfies).
+**Gaps:** none against the requirements. Floors 3–5 are upside beyond the minimum (which Floor 1 already delivers).

@@ -1,205 +1,117 @@
-# PlanetDDS Agentic Scheduler — Project Memory
+# Agentic Scheduling Assistant — Project Notes
 
-> **This file auto-loads when working in this repo. It is the single source of truth for
-> resuming work.** The granular, task-by-task build steps live in the implementation plan:
-> `docs/superpowers/plans/2026-05-31-agentic-scheduler.md` — read it for code-level detail.
+> **This file auto-loads when working in this repo.** It's the quick orientation;
+> the granular, task-by-task build steps live in the implementation plan at
+> `docs/superpowers/plans/2026-05-31-agentic-scheduler.md`, and the HTTP contract
+> in `API.md`.
 
-## What this is (and why it matters)
+## What this is
 
-A **final-round interview take-home** for **Planet DDS** (dental SaaS). Scott is a TypeScript
-and Anthropic-API beginner who must build this AND present/defend it live in front of 4–8
-engineers + execs. **He needs to understand every piece cold — never optimize for speed over
-his understanding.** Teach as you build.
+An agentic appointment-scheduling assistant. It turns an unstructured patient
+request ("Can I come in next Thursday after 3?") into the **top-3 ranked,
+explainable appointment slots** over a JSON-backed schedule: an LLM/NLP agent
+extracts intent (date, time window, urgency, type, provider), a deterministic
+agent enforces hard constraints and scores candidates, and the result is
+consistent and explainable. Mock data is JSON.
 
-- **Presentation:** Thursday **2026-06-04, 11:00 AM**.
-- **Build runway:** Sun May 31 eve + all Mon Jun 1 + all Tue Jun 2 (day). **Tue night = laptop
-  setup + practice (HARD STOP on building).** Wed = drive Phoenix→ + practice to his son.
-- **Assignment chosen:** Assignment **2** of 2 in `Interview Agentic Assignment.docx` —
-  *"Intelligent Agentic Workflow Optimizer"* (appointment scheduling). **Assignment 1
-  (claim-scrubbing RCM) is explicitly OUT of scope** — they said pick one; he picked #2.
+## Architecture
 
-## The task (verbatim requirements)
-
-Turn an unstructured patient request ("Can I come in next Thursday after 3?") into the **top-3
-ranked, explainable appointment slots**. Must: accept unstructured requests; use an LLM/NLP
-agent to extract intent/constraints/preferences (date, time window, urgency); coordinate with a
-schedule-reasoning agent over a **mock JSON schedule**; apply scoring to rank top 3; return
-**clear explainable** recommendations. Outcome must show it reduces manual effort, improves
-speed/accuracy, and produces **consistent, explainable** decisions. Mock data = CSV/JSON.
-
-## Architecture (locked)
-
-**Orchestrator–workers pattern** (cite Anthropic's "Building Effective Agents"):
-- **Scheduling Assistant** = deterministic orchestrator (workflow, fixed path — NOT an LLM,
-  because control flow never branches).
-- **Intent Agent** = LLM-backed (cheap Haiku) with a **deterministic rule-based fallback**.
+**Orchestrator–workers pattern** (per Anthropic's "Building Effective Agents"):
+- **SchedulingAssistant** = deterministic orchestrator (a workflow, fixed path —
+  not an LLM, because control flow never branches).
+- **Intent Agent** = LLM-backed (cheap Haiku) with a **deterministic rule-based
+  fallback** for cost control and offline operation.
 - **Schedule-Reasoning Agent** = fully deterministic constraint eval + weighted scoring.
-- Mock data is JSON behind a **`ScheduleStore` interface** (future = Google Calendar/EHR drop-in).
-- A **Hono backend** holds the API key (NEVER in the browser); **React/Vite** frontend.
+- Mock data sits behind a **`ScheduleStore` interface** (Google Calendar / EHR /
+  practice-management DB is a drop-in replacement).
+- A **Hono backend** holds the API key (never in the browser); **React/Vite** frontend.
+- The project is **API-first**: `src/core/` is pure, `src/server/` is a thin HTTP
+  adapter, and web/CLI/tests are all clients.
 
 ### Three goals, one design
-1. **Cost-conscious:** LLM called only when the rule parser can't resolve the request. Dashboard
-   shows % handled free + est. cost/1000 requests. Model = Claude Haiku + prompt caching.
-2. **Self-trained "skills":** precise vocabulary matters — hard constraints = **structured data**
-   enforced deterministically; the LLM only *translates* an admin's English sentence into a rule.
-   A real Anthropic **Agent Skill** (dental-triage) is reserved for **fuzzy clinical judgment**,
-   NOT hard rules. Do not blur this in the demo — an engineer will catch it.
-3. **Offline mode:** the rule-based parser IS the offline path (graceful degradation, built into
-   the foundation via the Tiered extractor). `chrono-node` does deterministic date parsing.
+1. **Cost-conscious:** the LLM is called only when the rule parser can't resolve
+   the request. The dashboard shows % handled free + est. cost/1000 requests.
+   Model = Claude Haiku + prompt caching.
+2. **Rules vs. skills (precise vocabulary):** hard constraints are **structured
+   data** enforced deterministically; the LLM only *translates* an admin's English
+   sentence into a rule. A real Anthropic **Agent Skill** (dental-triage) supplies
+   **fuzzy clinical judgment** (urgency + emergency escalation), never hard rules.
+3. **Offline mode:** the rule-based parser IS the offline path (graceful
+   degradation via the Tiered extractor). `chrono-node` does deterministic date parsing.
 
-## Defense cheat-sheet (the questions the panel will ask)
-- **"What makes it agentic vs a script?"** Two agents reason over ambiguity; orchestration is a
-  workflow because steps are fixed — reserving autonomy for where it's needed is a deliberate call.
-- **"How is it consistent?"** Ranking is deterministic code → identical output for identical input.
-- **"Cost?"** Haiku + prompt caching + only-when-needed; metrics visible on the dashboard.
-- **"API down?"** Rule-based parser is the offline fallback.
-- **"Trust the LLM?"** Every LLM response validated against a Zod schema; failure → fallback.
-- **"Explainable?"** Explanations generated FROM the scoring factors → always faithful.
+## Key design points
+- **Agentic vs. script:** two agents reason over ambiguity; orchestration is a
+  workflow because steps are fixed — autonomy is reserved for where it's needed.
+- **Consistent:** ranking is deterministic code → identical output for identical input.
+- **Trustworthy LLM output:** every LLM response is validated against a Zod schema;
+  failure → deterministic fallback.
+- **Explainable:** explanations are generated FROM the scoring factors → always faithful.
+- **Emergency safety:** a request that reads as a medical emergency escalates
+  *before* scheduling and forces a staff callback — deterministic, works offline.
 
 ## Tech stack
-TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `chrono-node`,
-`dotenv`, Hono (backend), React + Vite (frontend). `.env` holds `ANTHROPIC_API_KEY` and is
-**gitignored from commit #1**. Scott bought $20 of API credits (far more than needed).
+TypeScript, Node, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku),
+`chrono-node`, `dotenv`, Hono (backend), React + Vite (frontend). `.env` holds
+`ANTHROPIC_API_KEY` and is gitignored.
 
-## Build floors (each leaves a complete, demoable system)
-- **0–1:** skeleton + git + CLI core (request→intent→candidates→ranked top-3+explanation).
-  **Floor 1 alone fully satisfies the assignment.**
-- **2:** Zod validation, tiered/offline intent, 3 rehearsed demo scenarios.
-- **3:** Hono backend + React UI + live calendar.
-- **4:** admin dashboard (cost/efficiency + utilization metrics).
-- **5:** plain-English rule-teaching + dental-triage Agent Skill.
+## Project structure
+- `src/core/` — pure engine: `time`, `store/` (ScheduleStore + JsonScheduleStore),
+  `intent/` (rule-based, LLM, tiered extractors + Zod schema), `schedule/`
+  (candidateGenerator, scorer, ScheduleReasoningAgent), `orchestrator/`
+  (SchedulingAssistant), `llm/` (anthropicClient + costTracker), `rules/`
+  (NL rule parser), `skills/` (dental-triage SKILL.md + triage loader),
+  `log/` (EventLog + JsonlEventLog), `data/` (JSON seeds).
+- `src/server/` — `app.ts` (`createApp(deps)` route factory, testable via
+  `app.request()`), `index.ts` (reads `.env`, wires deps, serves on :3000),
+  `metrics.ts`.
+- `src/cli/` — `index.ts` (one-shot CLI), `scenarios.ts` (example runs).
+- `web/` — React + Vite app; `vite.config.ts` proxies `/api` → :3000.
+- `tests/` — Vitest suite. `docs/` — implementation plan. `API.md` — HTTP reference.
 
-## Demo scenarios (rehearse these 3)
+## How to run
+```bash
+npm install
+npm run cli -- "Can I come in next Thursday after 3?" --ref=2026-05-31
+npm run scenarios     # four example runs (happy / ambiguous / urgent / emergency)
+npm test              # full suite
+npm run typecheck     # tsc --noEmit
+```
+Web (two terminals): `npm run server` (backend :3000) + `cd web && npm run dev`
+(frontend :5173). Open http://localhost:5173 — Patient Intake + Admin Dashboard.
+
+**Reference-date gotcha:** `--ref=YYYY-MM-DD` pins "today". Use `2026-05-31` so
+"next Thursday" resolves to 6/4, where the seed calendar has data. (chrono reads
+"next Thursday" as *next week's* Thursday.)
+
+**Online (optional):** put `ANTHROPIC_API_KEY=...` in `.env`. With a key,
+ambiguous requests escalate to Haiku; without one, everything runs deterministically
+for $0. `.env` is authoritative (loaded with override) so a stray empty env var
+can't force offline mode. Logs reset: `npm run logs:reset`.
+
+## Example scenarios
 1. Happy path: "Can I come in next Thursday after 3?" → clean Thu ≥15:00 match.
-2. Ambiguity: "sometime next week, mornings are better but I'm flexible" → LLM resolves.
-3. Urgent/no-match: "my tooth is killing me, anything today" when full → triage urgent,
-   best-effort closest slots, explanation states it couldn't do better. (This is the showstopper.)
+2. Ambiguity: "sometime next week, mornings are better but I'm flexible".
+3. Urgent / no-match: "my tooth is killing me, can I come in this evening?" →
+   urgent triage, honest best-effort closest slots, callback queued.
+4. Emergency: "a tooth got knocked out and my mouth won't stop bleeding" →
+   911 directive + immediate staff callback (overrides normal scheduling).
 
-## CURRENT STATUS (update this as you go)
-- [x] Discovery + architecture brainstorming (done in chat).
-- [x] Implementation plan written: `docs/superpowers/plans/2026-05-31-agentic-scheduler.md`.
-- [x] **FLOOR 1 COMPLETE** (Tasks 1–10). Working CLI demo, 25 tests passing. The whole
-  assignment is satisfied offline/deterministically — no API key needed yet.
-  - Core: time, JsonScheduleStore, candidateGenerator (hard constraints), scorer
-    (5 weighted factors, explainable), ScheduleReasoningAgent (rank top-3 + bestEffort),
-    RuleBasedIntentExtractor (chrono + keywords = offline brain), SchedulingAssistant
-    (deterministic orchestrator), CLI (`src/cli/index.ts`).
-  - Demo: `npm run cli -- "Can I come in next Thursday after 3?" --ref=2026-05-31`
-    and `npm run cli -- "my tooth is killing me, anything today" --ref=2026-06-04`.
-  - `--ref=YYYY-MM-DD` pins the reference date; use `2026-05-31` so "next Thursday" = 6/4
-    (where the seed calendar has data). chrono reads "next Thu" as NEXT week's Thursday.
-- [x] **FLOOR 2 COMPLETE** (Tasks 11–14). 49 tests passing.
-  - Zod `parseIntent` (untrusted-input boundary), `LlmIntentExtractor` (DI'd `LlmClient`,
-    prompt caching, throws `LlmExtractionError` on bad output), `CostTracker` (USD meter),
-    `TieredIntentExtractor` (rules-first → LLM escalation → offline/failure fallback, records
-    `lastPath` + `pathCounts`), and 3 canonical demo scenarios (`npm run scenarios`).
-  - **Money slide:** `npm run scenarios` runs offline (no key) → "3 requests served, 0 API
-    calls, $0.000000". All three stories (happy / ambiguous-mornings / urgent-best-effort) work.
-  - LLM path is built + unit-tested with a FAKE client, but a REAL live API call has NOT been
-    made yet (no key in dev env). **Tue night: set `.env` ANTHROPIC_API_KEY and run
-    `npm run scenarios` with a genuinely ambiguous request to confirm the live `llm` path.**
-- [x] **FLOOR 3 — Task 15 COMPLETE.** 55 tests passing (49 + 6 server).
-  - `src/server/app.ts` = `createApp(deps)` factory (DI: store, assistant, tiered, costTracker)
-    → testable in-process via `app.request()` (no socket). `src/server/index.ts` = the ONLY
-    file that reads `.env`/the API key + serves on a port (`@hono/node-server`, default 3000).
-  - Routes: `POST /api/schedule` {request, refDate?} → {intent, recommendation, pathTaken};
-    `GET /api/state` (calendar data); `GET /api/metrics` (requestsServed vs apiCalls, $); 
-    `POST /api/book` {slot, patientId}; `POST /api/rules` → 501 stub (Floor 5 wires it).
-  - Store is `persist:false` in the server → booking updates the in-memory calendar live but
-    never rewrites seed JSON (every demo cold-start is identical). Installed `@hono/node-server`.
-  - Run: `npm run server` (boots OFFLINE with no key — rules path, $0). Smoke-tested live:
-    Thu 6/4 3 PM, pathTaken=rules, apiCalls=0.
-- [x] **FLOOR 3 — Tasks 16 + 17 COMPLETE.** React app in `web/` (Vite 8, React 19).
-  - `web/vite.config.ts` proxies `/api` → localhost:3000 (same-origin, no CORS). Run the UI
-    with TWO terminals: `npm run server` (root, backend :3000) + `cd web && npm run dev` (:5173).
-  - `web/src/api.ts` = typed client mirroring server types + date fmt helpers.
-  - `web/src/App.tsx` = two-tab shell (Patient Intake / Admin Dashboard), clinical theme in
-    `index.css`/`App.css`. `web/src/views/Intake.tsx` = request box (3 demo-example chips +
-    pinned reference date) → POST /api/schedule → intent chips + top-3 slot cards (score,
-    matched factors w/ point contributions, plain-English explanation) + per-card Book button
-    → POST /api/book. `web/src/views/Admin.tsx` = placeholder (calendar = Task 18).
-  - Verified end-to-end THROUGH the Vite proxy: happy path, urgent best-effort, and a full
-    book (appt-003 created, in-memory count 2→3). `npx tsc -b` clean. Browser automation was
-    down so the VISUAL has not been eyeballed yet — open http://localhost:5173 to confirm.
-- [x] **FLOOR 3 COMPLETE** (Task 18). `web/src/components/Calendar.tsx` = hand-rolled day grid
-  (providers as columns, 30-min rows) from GET /api/state: background cells, closed/day-off
-  shading (honors per-provider hours + dayoff rules), rule blocks (lunch), booked appointments,
-  recommendation highlights. Mounted in Admin (day picker + refresh) and under Intake results
-  (highlights recommended slots; booking refreshes the grid). `npx tsc -b` clean. NOTE: the
-  full UI was never eyeballed in a browser this session (Chrome extension not connected) —
-  open http://localhost:5173 to confirm visuals before relying on them.
-- [x] **FLOOR 4 COMPLETE** (Tasks 19–20). `src/server/metrics.ts` LatencyMeter; GET /api/metrics
-  now returns requestsServed/apiCalls/freeHandled/freeSharePct/estimatedUsd/costPer1000Usd/
-  avgLatencyMs/pathCounts/tokenTotals. `web/src/components/Dashboard.tsx` = SVG donut (free vs
-  LLM), cost/1000 tile, speed tile (vs ~3 min manual baseline = 180_000ms), requests-served,
-  + per-provider utilization bars (client-side from /api/state). Mounted atop Admin calendar.
-- [x] **FLOOR 5 COMPLETE** (Tasks 21–23). 70 tests passing.
-  - Task 21: `src/core/rules/ruleSchema.ts` (Zod boundary + provider resolution) + `ruleParser.ts`
-    (regexParseRule offline-first → LLM fallback → Zod validate). LLM only translates; rule is data.
-  - Task 22: POST /api/rules live (parse → addRule → return rule + updated list; 422 on unparseable;
-    400 on empty). `web/src/components/RuleTeacher.tsx` in Admin (echoes parsed rule, reloads calendar).
-    index.ts shares one AnthropicClient across intent + rule translation.
-  - Task 23: real Agent Skill `src/core/skills/dental-triage/SKILL.md` (frontmatter + symptom→urgency
-    table) + `triage.ts` loader/classifier. RuleBasedIntentExtractor takes optional skill (combines
-    with timing keywords, more-severe wins); server + scenarios load it. `tests/triage.test.ts` proves
-    the swap-skill flex (tests/fixtures/conservative-triage). README written (also covers Task 24).
-- [x] **ALL FLOORS COMPLETE. Build done.** Full web app (intake + admin dashboard + live calendar
-  + NL rule teaching + triage skill).
-- [x] **EMERGENCY ESCALATION ADDED (Scott's request).** Skill-driven, deterministic, offline.
-  - `dental-triage/SKILL.md` table gained an `escalation` column (emergency|callback|blank) +
-    two 911-level red-flag rows (airway/breathing/swallowing, uncontrolled bleeding).
-  - `triage.ts`: `triageRequest` (single pass → urgency+escalation), `assessEscalation` → patient
-    directive (911 message vs callback message). `classifyUrgency` now wraps triageRequest.
-  - `SchedulingAssistant` does an emergency check FIRST (Step 0); `AssistantResult.escalation`.
-    Constructor takes optional triageSkill (5th arg); server + scenarios pass it.
-  - Server: POST /api/schedule returns `escalation`; emergencies pushed to in-memory callback
-    queue; `GET /api/callbacks`; metrics `emergencyCallbacks`. UI: red/amber banner on Intake;
-    `CallbackQueue` panel on Admin. Scenario 4 (emergency) added to `npm run scenarios`.
-  - 81 tests (added 9). Verified live: emergency→911 directive+queue, callback→ASAP, normal→none.
-- [x] **LOGGING / OBSERVABILITY ADDED (Scott's request, Full scope).** 92 tests green.
-  - `src/core/log/eventLog.ts`: `EventLog` port + `JsonlEventLog` (in-memory buffer + JSONL file
-    at `logs/events.jsonl`, gitignored). Event types: schedule_request, escalation, booking,
-    rule_added, error. Each has {id, ts, type, correlationId?, data}. PHI-flagged in code + README.
-  - Server logs every action; booking carries correlationId back to its schedule_request.
-    Endpoints: GET /api/logs(?type=&limit=), GET /api/logs/stats, POST /api/logs/replay (re-run
-    a logged request, diff vs current → regression check), GET /api/logs/export?format=json|csv,
-    POST /api/logs/reset. app.onError logs errors. /api/schedule now returns requestId.
-  - UI: `LogPanel` on Admin (activity feed w/ type filters, per-minute bar chart, totals pills,
-    export JSON/CSV, Clear logs w/ confirm, per-request Replay). Persists across restarts;
-    `npm run logs:reset` or the button wipes it.
-  - **`API.md`** written — full endpoint reference + versioning/auth/persistence as roadmap.
-  - Architecture decision (discussed): project is already API-first (ports+adapters); core is
-    pure, server is a thin adapter, web/CLI/tests are clients. Did NOT add /v1 or a separate
-    logging microservice (over-engineering for the demo) — those are spoken roadmap.
-- [x] **QA PASS DONE (92 tests green; `npm run typecheck` clean; web build clean).** Verified live:
-  3 demo scenarios (all free rules path; #3 urgent+bestEffort), vague request → live `llm` path
-  ($0.0008/call), all error paths (400/404/409/422), rule-teaching enforced, triage drives urgency.
-  Fixes found+made this pass:
-  1. `.env` now authoritative (override:true) — a shell-exported EMPTY ANTHROPIC_API_KEY was
-     trapping the app offline. Empty/whitespace key treated as no key. (also fixed in scenarios.ts)
-  2. POST /api/book now rejects conflicts (409) — was allowing double-booking of overlapping slots.
-  3. ScheduleReasoningAgent assigns DISTINCT operatories to top-N — was funneling all picks into
-     one room, so the top recommendations weren't independently bookable.
-  4. Added `npm run typecheck`; fixed test json() unknown-type errors.
-  - NOT testable by me: the actual VISUAL rendering (Chrome extension never connected). Calendar
-    grid math was traced by hand and looks correct, but Scott must eyeball http://localhost:5173.
-- [ ] **REMAINING (not building — verification + delivery):**
-  1. **Push to GitHub** — commits are LOCAL only; needs Scott's auth (ASK before pushing).
-  2. **Eyeball the UI** at http://localhost:5173 (never visually checked — Chrome ext not connected).
-  3. **Tue night**: set `.env` ANTHROPIC_API_KEY, run an ambiguous request to confirm the live `llm`
-     path fires (path=llm, cost>0); full cold-start dry run on the demo laptop (Node+Git+VS Code →
-     git clone → npm install (root AND web/) → npm run server + cd web && npm run dev → .env).
-- Known simplification (defense): candidateGenerator still doesn't filter provider role/specialty vs
-  appointment type (a hygienist can surface for an emergency). Honest, easy future hard-constraint.
-- Execution mode chosen: **inline together** (NOT subagent-driven — Scott must see/own every step).
-- Git: local repo initialized on `main`, remote connected to
-  `https://github.com/srfinch17/planetdds-workflowoptimizer.git`. Commits NOT pushed yet
-  (pushing needs Scott's GitHub auth — ask before pushing). Latest commit = Floor 2 complete.
-- Known simplification (note for defense): candidateGenerator does NOT yet filter provider
-  role/specialty vs appointment type, so a hygienist (Dr. Jones) can surface for an
-  "emergency". Easy future hard-constraint; out of scope for Floor 1. Flag it honestly if asked.
+## Current status
+**Feature-complete.** ~93 tests passing, `npm run typecheck` clean, web build clean.
+Implemented: CLI core; Zod validation; tiered/offline intent; Hono backend; React
+UI (intake + live calendar + admin dashboard); cost/efficiency metrics;
+plain-English rule teaching; dental-triage Agent Skill; emergency escalation with
+a staff callback queue; and an append-only event log (`EventLog` port) surfaced as
+an observability API (`/api/logs`, stats, replay, export, reset) with an Admin
+activity panel.
 
-## Environment notes
-- Dev on Scott's PC (this machine, most tools present). Node v26.1.0, npm 11.7.0 confirmed.
-- Demo on a **pristine Windows 11 laptop** — will need Node + Git + VS Code installed Tue night,
-  then `git clone`, `npm install`, create `.env` manually. **Do a full cold-start dry run Tue night.**
+## Known simplifications (intentional)
+- `candidateGenerator` does not yet filter provider role/specialty vs. appointment
+  type, so a hygienist could surface for an "emergency." Easy future hard-constraint.
+- The `/api/logs/replay` metric-restore assumes a single user (no request firing
+  concurrently with a replay) — fine in practice, not hardened for concurrency.
+
+## PHI note
+Event-log entries can contain raw patient messages (health information). All data
+here is mock, so it's safe; a production deployment must encrypt the log at rest,
+access-control it, limit retention, and likely redact.
