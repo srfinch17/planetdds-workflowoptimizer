@@ -17,21 +17,31 @@ is actually bookable. Do not conflate the two.
 
 ## Triage table
 
-Each row maps symptom keywords to an urgency level. Rows are evaluated top to
-bottom; the first row with a keyword present in the request wins, so the most
-severe categories are listed first. Keywords match on whole words.
+Each row maps symptom keywords to an **urgency** level and an **escalation**
+level. Rows are evaluated top to bottom; the first row with a keyword present in
+the request wins, so the most severe categories are listed first. Keywords match
+on whole words. The escalation column is one of:
 
-| symptoms | urgency | note |
-| --- | --- | --- |
-| swelling, swollen, abscess, fever, pus, infection | urgent | possible infection — same-day |
-| knocked out, avulsed, trauma, broke, broken, cracked, chipped, bleeding | urgent | dental trauma — same-day |
-| throbbing, severe, killing, unbearable, excruciating, cannot sleep | urgent | acute pain — same-day |
-| lost filling, lost crown, filling, crown, ache, aching, sore, sensitive, sensitivity, toothache | soon | discomfort — within a few days |
-| cleaning, checkup, check-up, exam, whitening, routine, consultation | routine | elective — normal scheduling |
+- `emergency` — a potential medical emergency (airway, breathing, swallowing, or
+  uncontrolled bleeding). Advise emergency services AND alert the office to call
+  back immediately.
+- `callback` — an urgent same-day dental need. The office should call the patient
+  back as soon as possible to arrange care.
+- *(blank)* — no escalation; schedule normally.
+
+| symptoms | urgency | escalation | note |
+| --- | --- | --- | --- |
+| can't breathe, cant breathe, trouble breathing, difficulty breathing, can't swallow, cant swallow, trouble swallowing, difficulty swallowing, airway, throat swelling | urgent | emergency | airway/breathing — possible medical emergency |
+| won't stop bleeding, wont stop bleeding, uncontrolled bleeding, heavy bleeding, bleeding heavily | urgent | emergency | uncontrolled bleeding — possible medical emergency |
+| swelling, swollen, abscess, fever, pus, infection | urgent | callback | possible infection — same-day callback |
+| knocked out, avulsed, trauma, broke, broken, cracked, chipped, bleeding | urgent | callback | dental trauma — same-day callback |
+| throbbing, severe, killing, unbearable, excruciating, cannot sleep | urgent | callback | acute pain — same-day callback |
+| lost filling, lost crown, filling, crown, ache, aching, sore, sensitive, sensitivity, toothache | soon | | discomfort — within a few days |
+| cleaning, checkup, check-up, exam, whitening, routine, consultation | routine | | elective — normal scheduling |
 
 ## Default
 
-If no symptom matches, treat the request as **routine**.
+If no symptom matches, treat the request as **routine** with no escalation.
 
 ## How this is used
 

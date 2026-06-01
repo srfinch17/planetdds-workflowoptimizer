@@ -71,6 +71,27 @@ their own `SKILL.md` — say, one that escalates *sensitivity* to urgent — and
 system's triage behavior changes with **zero code changes**. (`tests/triage.test.ts`
 proves exactly this by swapping in a second skill file.)
 
+## Emergency escalation (safety override)
+
+A patient message — from any channel (voice transcript, SMS, web chat; all
+arrive as text) — is checked for a clinical emergency **before** normal
+scheduling. Detection is tiered, most-severe-first, and driven by the same
+swappable triage `SKILL.md`:
+
+- **`emergency`** — airway/breathing/swallowing trouble or uncontrolled bleeding
+  → the patient is told to call 911 / go to the ER, and the office is alerted to
+  **call back immediately**.
+- **`callback`** — urgent same-day dental need (swelling/abscess, knocked-out
+  tooth, severe pain) → the office is told to **call the patient back ASAP** to
+  arrange an emergency visit.
+- **`none`** — schedule normally.
+
+When a request escalates, the system **overrides** the normal flow: it returns a
+patient-facing directive, still computes the soonest slots (so staff can offer
+one on the callback), and pushes the request onto a **staff callback queue**
+(`GET /api/callbacks`, shown on the Admin dashboard). It's deterministic and
+works offline — a genuine emergency never depends on the LLM being reachable.
+
 ## How to run
 
 **CLI (no key needed — runs offline):**

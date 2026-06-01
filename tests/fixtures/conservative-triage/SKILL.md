@@ -10,12 +10,13 @@ with sensitivity or pain the same day.
 
 ## Triage table
 
-| symptoms | urgency | note |
-| --- | --- | --- |
-| swelling, swollen, abscess, fever, pus, infection | urgent | possible infection — same-day |
-| knocked out, trauma, broke, broken, cracked, chipped, bleeding | urgent | dental trauma — same-day |
-| throbbing, severe, killing, ache, aching, sore, sensitive, sensitivity, toothache | urgent | see same-day to be safe |
-| cleaning, checkup, check-up, exam, whitening, routine | routine | elective — normal scheduling |
+| symptoms | urgency | escalation | note |
+| --- | --- | --- | --- |
+| can't breathe, trouble breathing, can't swallow, airway | urgent | emergency | airway/breathing — possible medical emergency |
+| swelling, swollen, abscess, fever, pus, infection | urgent | callback | possible infection — same-day |
+| knocked out, trauma, broke, broken, cracked, chipped, bleeding | urgent | callback | dental trauma — same-day |
+| throbbing, severe, killing, ache, aching, sore, sensitive, sensitivity, toothache | urgent | callback | see same-day to be safe |
+| cleaning, checkup, check-up, exam, whitening, routine | routine | | elective — normal scheduling |
 
 ## Default
 

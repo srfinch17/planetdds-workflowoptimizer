@@ -44,10 +44,11 @@ const llm: IntentExtractor = client
       },
     };
 
-// The dental-triage Agent Skill drives clinical urgency from this file alone.
+// The dental-triage Agent Skill drives clinical urgency AND emergency
+// escalation from this file alone.
 const triageSkill = loadDefaultTriageSkill();
 const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(triageSkill), llm, { offline });
-const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store);
+const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store, 3, triageSkill);
 
 const app = createApp({ store, assistant, tiered, costTracker, ruleLlm: client ?? undefined });
 

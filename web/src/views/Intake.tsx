@@ -135,6 +135,21 @@ export function Intake() {
 
       {error && <div className="banner banner--error">{error}</div>}
 
+      {result && result.escalation.level !== 'none' && (
+        <section
+          className={`escalation escalation--${result.escalation.level}`}
+          role="alert"
+        >
+          <div className="escalation__title">
+            {result.escalation.level === 'emergency' ? '🚨' : '⚠️'} {result.escalation.headline}
+          </div>
+          <p className="escalation__msg">{result.escalation.message}</p>
+          <div className="escalation__tag">
+            Flagged for staff callback{result.escalation.matched ? ` · detected "${result.escalation.matched}"` : ''}
+          </div>
+        </section>
+      )}
+
       {result && (
         <>
           <IntentSummary result={result} providerName={providerName} />

@@ -7,6 +7,7 @@ import { TieredIntentExtractor } from "../src/core/intent/TieredIntentExtractor"
 import { ScheduleReasoningAgent } from "../src/core/schedule/ScheduleReasoningAgent";
 import { SchedulingAssistant } from "../src/core/orchestrator/SchedulingAssistant";
 import { CostTracker } from "../src/core/llm/costTracker";
+import { loadDefaultTriageSkill } from "../src/core/skills/triage";
 import type { Hono } from "hono";
 
 const DATA_DIR = fileURLToPath(new URL("../src/core/data", import.meta.url));
@@ -22,8 +23,9 @@ function buildApp(): { app: Hono; tiered: TieredIntentExtractor } {
       throw new Error("LLM unavailable (offline test)");
     },
   };
-  const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(), llm, { offline: true });
-  const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store);
+  const skill = loadDefaultTriageSkill();
+  const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(skill), llm, { offline: true });
+  const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store, 3, skill);
   const app = createApp({ store, assistant, tiered, costTracker });
   return { app, tiered };
 }
@@ -87,6 +89,35 @@ describe("Hono backend API", () => {
     expect(typeof body.avgLatencyMs).toBe("number");
     expect(body.avgLatencyMs).toBeGreaterThanOrEqual(0);
     expect(body.pathCounts).toBeDefined();
+  });
+
+  it("POST /api/schedule escalates a medical emergency and queues a staff callback", async () => {
+    const res = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        request: "a tooth got knocked out and my mouth won't stop bleeding",
+        refDate: "2026-06-04",
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.escalation.level).toBe("emergency");
+    expect(body.escalation.callbackRequired).toBe(true);
+
+    const queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks.length).toBe(1);
+    expect(queue.callbacks[0].level).toBe("emergency");
+  });
+
+  it("POST /api/schedule does NOT queue a callback for a normal request", async () => {
+    await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "routine cleaning next Thursday", refDate: "2026-05-31" }),
+    });
+    const queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks.length).toBe(0);
   });
 
   it("POST /api/rules parses a sentence (offline regex) and adds the rule", async () => {

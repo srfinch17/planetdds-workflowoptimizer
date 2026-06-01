@@ -103,3 +103,21 @@ export interface Recommendation {
   // the closest-scoring slots anyway rather than nothing. Keeps the demo honest.
   bestEffort: boolean;
 }
+
+// --- Emergency escalation ---
+// A patient message (voice/text/chat — all arrive as text) can describe a
+// clinical emergency. Detection is tiered, most-severe first:
+//   "emergency" = potential medical emergency (airway/breathing/swallowing,
+//                 uncontrolled bleeding) → advise 911 + immediate office callback.
+//   "callback"  = urgent same-day dental need (swelling/abscess, knocked-out
+//                 tooth, severe pain) → office calls back ASAP to arrange care.
+//   "none"      = normal scheduling.
+export type EscalationLevel = "emergency" | "callback" | "none";
+
+export interface Escalation {
+  level: EscalationLevel;
+  headline: string; // short banner title
+  message: string; // patient-facing directive
+  callbackRequired: boolean; // true → put on the staff callback queue
+  matched: string | null; // the symptom phrase that triggered it (explainability)
+}

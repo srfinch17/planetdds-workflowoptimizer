@@ -45,6 +45,12 @@ export const SCENARIOS: Scenario[] = [
     refDate: "2026-06-04",
     narration: "Urgent triage, but the clinic has no evening hours — so it offers the closest and says so.",
   },
+  {
+    title: "EMERGENCY override (force a callback)",
+    request: "I got hit in the face, a tooth got knocked out and my mouth won't stop bleeding",
+    refDate: "2026-06-04",
+    narration: "Reads as a medical emergency — the system overrides scheduling and forces an immediate callback directive.",
+  },
 ];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -62,8 +68,9 @@ export async function runScenarios(): Promise<void> {
     ? { extract: async () => { throw new Error("LLM unavailable (offline)"); } }
     : new LlmIntentExtractor(new AnthropicClient(), costTracker);
 
-  const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(loadDefaultTriageSkill()), llm, { offline });
-  const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store);
+  const triageSkill = loadDefaultTriageSkill();
+  const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(triageSkill), llm, { offline });
+  const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store, 3, triageSkill);
 
   console.log("");
   console.log(`=== Scheduling Assistant — demo scenarios ${offline ? "(OFFLINE mode)" : "(ONLINE)"} ===`);
@@ -75,8 +82,15 @@ export async function runScenarios(): Promise<void> {
     console.log(`  ${s.narration}`);
     console.log(`  Patient: "${s.request}"`);
 
-    const { intent, recommendation } = await assistant.handle(s.request, { refDate: s.refDate });
+    const { intent, recommendation, escalation } = await assistant.handle(s.request, { refDate: s.refDate });
     console.log(`  Path taken: ${tiered.lastPath}  |  intent source: ${intent.source}`);
+
+    if (escalation.level !== "none") {
+      const tag = escalation.level === "emergency" ? "🚨 EMERGENCY" : "⚠ URGENT CALLBACK";
+      console.log(`  ${tag} (triggered by "${escalation.matched}") → ${escalation.headline}`);
+      console.log(`      ${escalation.message}`);
+      console.log(`      [office callback queued]`);
+    }
 
     if (recommendation.slots.length === 0) {
       console.log("  → No bookable slots.");

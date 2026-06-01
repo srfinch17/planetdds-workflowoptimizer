@@ -145,7 +145,18 @@ TypeScript, Node 26, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku), `ch
     the swap-skill flex (tests/fixtures/conservative-triage). README written (also covers Task 24).
 - [x] **ALL FLOORS COMPLETE. Build done.** Full web app (intake + admin dashboard + live calendar
   + NL rule teaching + triage skill).
-- [x] **QA PASS DONE (72 tests green; `npm run typecheck` clean; web build clean).** Verified live:
+- [x] **EMERGENCY ESCALATION ADDED (Scott's request).** Skill-driven, deterministic, offline.
+  - `dental-triage/SKILL.md` table gained an `escalation` column (emergency|callback|blank) +
+    two 911-level red-flag rows (airway/breathing/swallowing, uncontrolled bleeding).
+  - `triage.ts`: `triageRequest` (single pass → urgency+escalation), `assessEscalation` → patient
+    directive (911 message vs callback message). `classifyUrgency` now wraps triageRequest.
+  - `SchedulingAssistant` does an emergency check FIRST (Step 0); `AssistantResult.escalation`.
+    Constructor takes optional triageSkill (5th arg); server + scenarios pass it.
+  - Server: POST /api/schedule returns `escalation`; emergencies pushed to in-memory callback
+    queue; `GET /api/callbacks`; metrics `emergencyCallbacks`. UI: red/amber banner on Intake;
+    `CallbackQueue` panel on Admin. Scenario 4 (emergency) added to `npm run scenarios`.
+  - 81 tests (added 9). Verified live: emergency→911 directive+queue, callback→ASAP, normal→none.
+- [x] **QA PASS DONE (81 tests green; `npm run typecheck` clean; web build clean).** Verified live:
   3 demo scenarios (all free rules path; #3 urgent+bestEffort), vague request → live `llm` path
   ($0.0008/call), all error paths (400/404/409/422), rule-teaching enforced, triage drives urgency.
   Fixes found+made this pass:

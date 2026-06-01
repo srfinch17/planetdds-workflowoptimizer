@@ -25,8 +25,8 @@ const minutes = (iso: string): number => {
 };
 
 describe("canonical demo scenarios", () => {
-  it("exports exactly three scenarios with requests and reference dates", () => {
-    expect(SCENARIOS).toHaveLength(3);
+  it("exports the canonical demo scenarios with requests and reference dates", () => {
+    expect(SCENARIOS).toHaveLength(4);
     for (const s of SCENARIOS) {
       expect(s.request.length).toBeGreaterThan(0);
       expect(s.refDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);

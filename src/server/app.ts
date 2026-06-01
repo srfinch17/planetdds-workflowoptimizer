@@ -3,11 +3,21 @@ import type { ScheduleStore } from "../core/store/ScheduleStore";
 import type { SchedulingAssistant } from "../core/orchestrator/SchedulingAssistant";
 import type { TieredIntentExtractor } from "../core/intent/TieredIntentExtractor";
 import type { CostTracker } from "../core/llm/costTracker";
-import type { CandidateSlot, AvailabilityRule } from "../core/types";
+import type { CandidateSlot, AvailabilityRule, EscalationLevel } from "../core/types";
 import type { LlmClient } from "../core/llm/anthropicClient";
 import { parseRuleSentence } from "../core/rules/ruleParser";
 import { overlaps } from "../core/time";
 import { LatencyMeter } from "./metrics";
+
+/** A request that triaged as an emergency/urgent, queued for staff to call back. */
+interface CallbackRecord {
+  id: string;
+  request: string;
+  level: EscalationLevel;
+  headline: string;
+  matched: string | null;
+  createdAt: string;
+}
 
 /**
  * Everything the HTTP layer needs, injected. Nothing here knows about ports,
@@ -31,6 +41,7 @@ export function createApp(deps: AppDeps): Hono {
   const { store, assistant, tiered, costTracker, ruleLlm } = deps;
   const app = new Hono();
   const latency = new LatencyMeter(); // how fast we answer, server-side
+  const callbacks: CallbackRecord[] = []; // the staff "call this patient back" queue
 
   // Turn an unstructured patient request into ranked, explainable slots.
   // refDate is optional so the demo can pin "today" for reproducible scenarios.
@@ -43,10 +54,29 @@ export function createApp(deps: AppDeps): Hono {
     const refDate = typeof body.refDate === "string" ? body.refDate : undefined;
 
     const t0 = performance.now();
-    const { intent, recommendation } = await assistant.handle(request, { refDate });
+    const { intent, recommendation, escalation } = await assistant.handle(request, { refDate });
     latency.record(performance.now() - t0);
+
+    // Emergency override: a request flagged for callback is queued for staff
+    // immediately, so the office knows to phone the patient back ASAP.
+    if (escalation.callbackRequired) {
+      callbacks.unshift({
+        id: `cb-${Date.now()}`,
+        request,
+        level: escalation.level,
+        headline: escalation.headline,
+        matched: escalation.matched,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     // tiered.lastPath was just set by this exact call — surfaces the cost story.
-    return c.json({ intent, recommendation, pathTaken: tiered.lastPath });
+    return c.json({ intent, recommendation, pathTaken: tiered.lastPath, escalation });
+  });
+
+  // The staff callback queue (newest first) — the office's emergency worklist.
+  app.get("/api/callbacks", (c) => {
+    return c.json({ callbacks });
   });
 
   // The raw schedule state the calendar renders from.
@@ -80,6 +110,7 @@ export function createApp(deps: AppDeps): Hono {
       costPer1000Usd: requestsServed === 0 ? 0 : (usd / requestsServed) * 1000,
       avgLatencyMs: Math.round(latency.avgMs * 10) / 10,
       tokenTotals: costTracker.totals,
+      emergencyCallbacks: callbacks.length, // emergencies/urgent escalations queued
     });
   });
 

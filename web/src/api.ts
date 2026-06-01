@@ -50,10 +50,30 @@ export interface Recommendation {
 
 export type IntentPath = 'rules' | 'llm' | 'offline-fallback' | 'llm-failed-fallback' | null
 
+export type EscalationLevel = 'emergency' | 'callback' | 'none'
+
+export interface Escalation {
+  level: EscalationLevel
+  headline: string
+  message: string
+  callbackRequired: boolean
+  matched: string | null
+}
+
 export interface ScheduleResponse {
   intent: SchedulingIntent
   recommendation: Recommendation
   pathTaken: IntentPath
+  escalation: Escalation
+}
+
+export interface CallbackRecord {
+  id: string
+  request: string
+  level: EscalationLevel
+  headline: string
+  matched: string | null
+  createdAt: string
 }
 
 export interface Provider {
@@ -116,6 +136,7 @@ export interface MetricsResponse {
   estimatedUsd: number
   costPer1000Usd: number
   avgLatencyMs: number
+  emergencyCallbacks: number
   tokenTotals: {
     calls: number
     inputTokens: number
@@ -152,6 +173,10 @@ export function getState(): Promise<StateResponse> {
 
 export function getMetrics(): Promise<MetricsResponse> {
   return fetch('/api/metrics').then((r) => jsonOrThrow<MetricsResponse>(r))
+}
+
+export function getCallbacks(): Promise<{ callbacks: CallbackRecord[] }> {
+  return fetch('/api/callbacks').then((r) => jsonOrThrow<{ callbacks: CallbackRecord[] }>(r))
 }
 
 export function postRule(
