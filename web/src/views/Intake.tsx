@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   postSchedule,
   getState,
@@ -10,7 +10,10 @@ import {
   type ScoredSlot,
   type Provider,
   type Patient,
+  type Appointment,
+  type AvailabilityRule,
 } from '../api'
+import { Calendar } from '../components/Calendar'
 
 // The three rehearsed demo requests, as one-click fillers.
 const EXAMPLES = [
@@ -37,19 +40,29 @@ export function Intake() {
 
   const [providers, setProviders] = useState<Provider[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [rules, setRules] = useState<AvailabilityRule[]>([])
   const [patientId, setPatientId] = useState('')
   const [booked, setBooked] = useState<Record<string, boolean>>({})
 
-  // Load reference data once so we can show provider names and a patient picker.
-  useEffect(() => {
+  // Load live schedule state: provider names + patient picker for booking, and
+  // the appointments/rules the calendar renders. Re-run after a booking so the
+  // grid below updates immediately.
+  const loadState = useCallback(() => {
     getState()
       .then((s) => {
         setProviders(s.providers)
         setPatients(s.patients)
-        if (s.patients[0]) setPatientId(s.patients[0].id)
+        setAppointments(s.appointments)
+        setRules(s.rules)
+        setPatientId((cur) => cur || s.patients[0]?.id || '')
       })
-      .catch((e) => setError(String(e.message ?? e)))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [])
+
+  useEffect(() => {
+    loadState()
+  }, [loadState])
 
   const providerName = (id: string) => providers.find((p) => p.id === id)?.name ?? id
   const slotKey = (s: ScoredSlot) => `${s.slot.providerId}@${s.slot.start}`
@@ -74,10 +87,17 @@ export function Intake() {
     try {
       await postBook(s.slot, patientId)
       setBooked((b) => ({ ...b, [slotKey(s)]: true }))
+      loadState() // refresh the calendar so the new appointment appears
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
   }
+
+  // The day + highlights for the in-context calendar under the results.
+  const calendarDay = result?.recommendation.slots[0]?.slot.start.slice(0, 10) ?? refDate
+  const highlights = new Set(
+    (result?.recommendation.slots ?? []).map((s) => `${s.slot.providerId}@${s.slot.start}`),
+  )
 
   return (
     <div className="intake">
@@ -160,6 +180,19 @@ export function Intake() {
               </select>
             </label>
           </div>
+
+          {providers.length > 0 && (
+            <section className="calendar-panel">
+              <span className="field-label">Calendar · {calendarDay} (★ = recommended)</span>
+              <Calendar
+                providers={providers}
+                appointments={appointments}
+                rules={rules}
+                day={calendarDay}
+                highlights={highlights}
+              />
+            </section>
+          )}
         </>
       )}
     </div>
