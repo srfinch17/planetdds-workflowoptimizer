@@ -243,7 +243,22 @@ export function createApp(deps: AppDeps): Hono {
     }
     const request = String(event.data.request ?? "");
     const refDate = typeof event.data.refDate === "string" ? event.data.refDate : undefined;
+
+    // Replay re-runs the REAL pipeline (so it reflects current behavior), which
+    // would otherwise bump path counts and the cost meter. Snapshot those and
+    // roll them back afterward — a diagnostic must not skew business metrics.
+    const pathSnapshot = { ...tiered.pathCounts };
+    const lastPathSnapshot = tiered.lastPath;
+    const costSnapshot = costTracker.snapshot();
+
     const { recommendation, escalation } = await assistant.handle(request, { refDate });
+
+    (Object.keys(pathSnapshot) as (keyof typeof tiered.pathCounts)[]).forEach((k) => {
+      tiered.pathCounts[k] = pathSnapshot[k];
+    });
+    tiered.lastPath = lastPathSnapshot;
+    costTracker.restore(costSnapshot);
+
     const current = recommendation.slots.map((s) => ({
       start: s.slot.start,
       providerId: s.slot.providerId,

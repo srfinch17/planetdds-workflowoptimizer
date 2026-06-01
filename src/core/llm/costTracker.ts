@@ -60,6 +60,19 @@ export class CostTracker {
   reset(): void {
     this.totalsState = blank();
   }
+
+  /** Capture the current totals so they can be restored later (see restore). */
+  snapshot(): CostTotals {
+    return { ...this.totalsState };
+  }
+
+  /**
+   * Roll the meter back to a snapshot. Used so a diagnostic replay, which
+   * re-runs the real pipeline, doesn't skew the business cost metrics.
+   */
+  restore(totals: CostTotals): void {
+    this.totalsState = { ...totals };
+  }
 }
 
 function blank(): CostTotals {

@@ -251,6 +251,26 @@ describe("Hono backend API", () => {
     expect(body.current.recommendations.length).toBeGreaterThan(0);
   });
 
+  it("replay is a diagnostic and must NOT skew live metrics", async () => {
+    const sched = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "cleaning next Thursday", refDate: "2026-05-31" }),
+    });
+    const { requestId } = (await sched.json()) as any;
+    const before = (await (await app.request("/api/metrics")).json()) as any;
+
+    await app.request("/api/logs/replay", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: requestId }),
+    });
+
+    const after = (await (await app.request("/api/metrics")).json()) as any;
+    expect(after.requestsServed).toBe(before.requestsServed); // replay didn't count as a request
+    expect(after.estimatedUsd).toBe(before.estimatedUsd); // and didn't skew cost
+  });
+
   it("POST /api/logs/reset clears the log", async () => {
     await app.request("/api/schedule", {
       method: "POST",
