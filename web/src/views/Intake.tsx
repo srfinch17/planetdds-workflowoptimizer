@@ -14,6 +14,7 @@ import {
   type AvailabilityRule,
 } from '../api'
 import { Calendar } from '../components/Calendar'
+import { MonthCalendar } from '../components/MonthCalendar'
 
 // One-click example requests. The Dr. Smith one shows the "your dentist vs.
 // alternatives" grouping; the last one trips the emergency escalation.
@@ -21,12 +22,16 @@ const EXAMPLES = [
   'Can I come in next Thursday after 3?',
   'I usually see Dr. Smith — anything next week?',
   "sometime next week, mornings are better but I'm flexible",
+  'a cleaning in about six months, mornings preferred',
   'my tooth is killing me, can I come in this evening?',
 ]
 
 // The seed calendar has data around early June 2026, and chrono reads "next
 // Thursday" relative to this date. Pinning it keeps results reproducible.
 const DEFAULT_REF_DATE = '2026-05-31'
+const TODAY = '2026-06-01'
+const MIN_MONTH = '2026-06'
+const MAX_MONTH = '2027-06'
 
 export function Intake() {
   const [request, setRequest] = useState(EXAMPLES[0])
@@ -41,6 +46,7 @@ export function Intake() {
   const [rules, setRules] = useState<AvailabilityRule[]>([])
   const [patientId, setPatientId] = useState('')
   const [booked, setBooked] = useState<Record<string, boolean>>({})
+  const [viewDay, setViewDay] = useState<string | null>(null) // day shown in the detail grid
 
   const loadState = useCallback(() => {
     getState()
@@ -69,6 +75,7 @@ export function Intake() {
     try {
       const res = await postSchedule(request.trim(), refDate || undefined)
       setResult(res)
+      setViewDay(res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? refDate)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -97,7 +104,9 @@ export function Intake() {
   const others = pref ? slots.filter((s) => s.slot.providerId !== pref) : slots
 
   const calendarDay = slots[0]?.slot.start.slice(0, 10) ?? refDate
+  const dayShown = viewDay ?? calendarDay
   const highlights = new Set(slots.map(slotKey))
+  const recommendedDays = new Set(slots.map((s) => s.slot.start.slice(0, 10)))
   const bookedKeys = new Set(Object.keys(booked).filter((k) => booked[k]))
 
   const renderCard = (s: ScoredSlot) => (
@@ -228,12 +237,25 @@ export function Intake() {
 
           {providers.length > 0 && (
             <section className="calendar-panel">
-              <span className="field-label">📆 Calendar · {calendarDay} — click a ★ slot to book</span>
+              <span className="field-label">🗓️ Where these land — pick a day to view</span>
+              <MonthCalendar
+                appointments={appointments}
+                providers={providers}
+                rules={rules}
+                selectedDate={dayShown}
+                onSelectDate={setViewDay}
+                initialMonth={calendarDay.slice(0, 7)}
+                minMonth={MIN_MONTH}
+                maxMonth={MAX_MONTH}
+                today={TODAY}
+                recommendedDays={recommendedDays}
+              />
+              <span className="field-label">📆 {dayShown} — click a ★ slot to book</span>
               <Calendar
                 providers={providers}
                 appointments={appointments}
                 rules={rules}
-                day={calendarDay}
+                day={dayShown}
                 highlights={highlights}
                 bookedKeys={bookedKeys}
                 onBookSlot={(key) => {

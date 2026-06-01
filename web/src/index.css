@@ -45,7 +45,18 @@
   --hatch-2: #e6ebe7;
   --hatch-off-1: #ebefec;
   --hatch-off-2: #e1e7e2;
+  --violet: #7c3aed;
+  --violet-soft: #ede9fe;
+  --violet-border: #d6c6fb;
+  /* per-dentist colors (Smith green · Pana violet · Jones amber) */
+  --prov-a: #0a9d5a;
+  --prov-a-soft: #e4f6ec;
+  --prov-b: #7c3aed;
+  --prov-b-soft: #ede9fe;
+  --prov-c: #c9750f;
+  --prov-c-soft: #fbf1de;
   --halo: rgba(10, 157, 90, 0.07);
+  --halo-2: rgba(124, 58, 237, 0.06);
   --grid-line: rgba(16, 40, 28, 0.025);
   --glow: 0 6px 18px rgba(10, 157, 90, 0.18);
   --shadow: 0 1px 2px rgba(16, 40, 28, 0.05), 0 4px 16px rgba(16, 40, 28, 0.06);
@@ -93,7 +104,17 @@
   --hatch-2: #0e1210;
   --hatch-off-1: #171c19;
   --hatch-off-2: #11150f;
+  --violet: #a78bfa;
+  --violet-soft: #211a39;
+  --violet-border: #3b2d66;
+  --prov-a: #18e08a;
+  --prov-a-soft: #0f241a;
+  --prov-b: #a78bfa;
+  --prov-b-soft: #211a39;
+  --prov-c: #f7a23a;
+  --prov-c-soft: #241a0b;
   --halo: rgba(24, 224, 138, 0.08);
+  --halo-2: rgba(167, 139, 250, 0.07);
   --grid-line: rgba(255, 255, 255, 0.018);
   --glow: 0 0 24px rgba(24, 224, 138, 0.22);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.55);
@@ -111,7 +132,8 @@ body {
   color: var(--ink);
   /* faint terminal grid + a soft signal-green halo bleeding from the top */
   background:
-    radial-gradient(1100px 440px at 50% -160px, var(--halo), transparent 70%),
+    radial-gradient(1000px 420px at 18% -160px, var(--halo), transparent 70%),
+    radial-gradient(900px 380px at 88% -120px, var(--halo-2), transparent 72%),
     linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 100% 28px,
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 28px 100%,
     var(--bg);

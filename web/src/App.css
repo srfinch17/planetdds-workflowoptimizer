@@ -105,11 +105,11 @@
 }
 
 .field-label {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
+  letter-spacing: 0.05em;
+  color: var(--ink);
 }
 
 .btn {
@@ -1142,4 +1142,172 @@ button.cal-block--hl:hover {
   color: var(--ink-soft);
   border-color: var(--line);
   cursor: default;
+}
+
+/* ---------- month calendar ---------- */
+
+.month-cal {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.month-cal__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.month-cal__title {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 150px;
+}
+.month-cal__legend {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mc-key {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+}
+.mc-key::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+.mc-key--a {
+  color: var(--prov-a);
+  background: var(--prov-a-soft);
+}
+.mc-key--a::before {
+  background: var(--prov-a);
+}
+.mc-key--b {
+  color: var(--prov-b);
+  background: var(--prov-b-soft);
+}
+.mc-key--b::before {
+  background: var(--prov-b);
+}
+.mc-key--c {
+  color: var(--prov-c);
+  background: var(--prov-c-soft);
+}
+.mc-key--c::before {
+  background: var(--prov-c);
+}
+
+.month-cal__dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.month-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.mc-cell {
+  min-height: 90px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+.mc-cell:not(:disabled):hover {
+  border-color: var(--brand);
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+.mc-cell--pad {
+  background: transparent;
+  border-color: transparent;
+  min-height: 90px;
+}
+.mc-cell--off {
+  background: transparent;
+  cursor: default;
+  opacity: 0.5;
+}
+.mc-cell--today .mc-num {
+  background: var(--brand);
+  color: var(--on-brand);
+  border-radius: 6px;
+  padding: 0 5px;
+}
+.mc-cell--selected {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px var(--violet-soft), 0 0 14px var(--violet-soft);
+}
+.mc-cell--rec {
+  border-color: var(--violet);
+}
+.mc-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+.mc-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+.mc-ev {
+  font-size: 9.5px;
+  line-height: 1.35;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid;
+}
+.mc-ev--a {
+  background: var(--prov-a-soft);
+  color: var(--prov-a);
+  border-left-color: var(--prov-a);
+}
+.mc-ev--b {
+  background: var(--prov-b-soft);
+  color: var(--prov-b);
+  border-left-color: var(--prov-b);
+}
+.mc-ev--c {
+  background: var(--prov-c-soft);
+  color: var(--prov-c);
+  border-left-color: var(--prov-c);
+}
+.mc-more {
+  font-size: 9.5px;
+  color: var(--ink-soft);
+  padding-left: 4px;
 }

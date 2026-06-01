@@ -8,6 +8,7 @@ import {
   type CallbackRecord,
 } from '../api'
 import { Calendar } from '../components/Calendar'
+import { MonthCalendar } from '../components/MonthCalendar'
 import { Dashboard } from '../components/Dashboard'
 import { RuleTeacher } from '../components/RuleTeacher'
 import { CallbackQueue } from '../components/CallbackQueue'
@@ -16,6 +17,9 @@ import { LogPanel } from '../components/LogPanel'
 // The seed calendar has its appointments on this Thursday — a sensible default
 // so the grid opens with something to look at.
 const DEFAULT_DAY = '2026-06-04'
+const TODAY = '2026-06-01'
+const MIN_MONTH = '2026-06'
+const MAX_MONTH = '2027-06'
 
 /**
  * Admin Dashboard. For Floor 3 this is the live calendar (the operational
@@ -78,11 +82,31 @@ export function Admin() {
 
       <CallbackQueue callbacks={callbacks} />
 
-      <RuleTeacher onApplied={reload} />
+      {state && (
+        <section className="calendar-panel">
+          <span className="field-label">🗓️ Practice schedule — click a day to drill in</span>
+          <MonthCalendar
+            appointments={state.appointments}
+            providers={state.providers}
+            rules={state.rules}
+            selectedDate={day}
+            onSelectDate={setDay}
+            initialMonth={day.slice(0, 7)}
+            minMonth={MIN_MONTH}
+            maxMonth={MAX_MONTH}
+            today={TODAY}
+          />
+        </section>
+      )}
 
       {state && (
-        <Calendar providers={state.providers} appointments={state.appointments} rules={state.rules} day={day} />
+        <section className="calendar-panel">
+          <span className="field-label">📆 {day} — day detail</span>
+          <Calendar providers={state.providers} appointments={state.appointments} rules={state.rules} day={day} />
+        </section>
       )}
+
+      <RuleTeacher onApplied={reload} />
 
       <LogPanel />
     </div>
