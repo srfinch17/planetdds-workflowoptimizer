@@ -90,20 +90,44 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
 
 ## Example scenarios
 1. Happy path: "Can I come in next Thursday after 3?" → clean Thu ≥15:00 match.
-2. Ambiguity: "sometime next week, mornings are better but I'm flexible".
-3. Urgent / no-match: "my tooth is killing me, can I come in this evening?" →
+2. Provider preference: "I usually see Dr. Smith — anything next week?" → results
+   split into "Your dentist" + "Other available dentists".
+3. Ambiguity: "sometime next week, mornings are better but I'm flexible".
+4. Far-future: "a cleaning in about six months, mornings preferred" → resolves to
+   ~6 months out and books a 30-min morning slot.
+5. Urgent / no-match: "my tooth is killing me, can I come in this evening?" →
    urgent triage, honest best-effort closest slots, callback queued.
-4. Emergency: "a tooth got knocked out and my mouth won't stop bleeding" →
+6. Emergency: "a tooth got knocked out and my mouth won't stop bleeding" →
    911 directive + immediate staff callback (overrides normal scheduling).
 
+## UI
+- React + Vite. **Light / Dark / System** theme dropdown (header). Design system is
+  fully token-driven (`web/src/index.css`): IBM Plex Mono for data/labels, IBM Plex
+  Sans for prose; neon-green primary accent, violet secondary, per-dentist colors
+  (Smith green · Pana violet · Jones amber).
+- **Month-view calendar** (`web/src/components/MonthCalendar.tsx`): navigable ~12
+  months, appointments as per-dentist color chips, click a day → day-detail grid.
+  On Intake it auto-jumps to the recommendation month and rings the recommended day.
+- Booking is request-driven: recommendations render as cards + clickable ★ slots on
+  the day grid (booked time shows rose/red, "taken"; open slots green, "book").
+
+## Data
+- `src/core/data/*.json` are the mock store. `appointments.json` holds ~a year of
+  seeded appointments generated deterministically by `scripts/genAppointments.mjs`
+  (re-run with `node scripts/genAppointments.mjs`). It preserves the canonical
+  example days (2026-06-04 + the following week) so those scenarios stay valid.
+- Appointment durations are type-driven (cleaning 30m, filling 60m, extraction 90m);
+  the candidate generator indexes appointments by day to stay fast against a full year.
+
 ## Current status
-**Feature-complete.** ~93 tests passing, `npm run typecheck` clean, web build clean.
+**Feature-complete.** ~95 tests passing, `npm run typecheck` clean, web build clean.
 Implemented: CLI core; Zod validation; tiered/offline intent; Hono backend; React
-UI (intake + live calendar + admin dashboard); cost/efficiency metrics;
-plain-English rule teaching; dental-triage Agent Skill; emergency escalation with
-a staff callback queue; and an append-only event log (`EventLog` port) surfaced as
-an observability API (`/api/logs`, stats, replay, export, reset) with an Admin
-activity panel.
+UI (intake + month + day calendars + admin dashboard + theming); provider-preference
+grouping; cost/efficiency metrics; plain-English rule teaching; dental-triage Agent
+Skill; emergency escalation with a staff callback queue; a year of mock scheduling
+data with type-driven durations; and an append-only event log (`EventLog` port)
+surfaced as an observability API (`/api/logs`, stats, replay, export, reset) with an
+Admin activity panel.
 
 ## Known simplifications (intentional)
 - `candidateGenerator` does not yet filter provider role/specialty vs. appointment
