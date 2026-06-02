@@ -2,6 +2,7 @@ import type {
   Appointment,
   AppointmentType,
   CandidateSlot,
+  Operatory,
   Provider,
   SchedulingIntent,
   Weekday,
@@ -77,6 +78,10 @@ export function generateCandidates(
         .map((r) => ({ start: `${date}T${r.start}:00`, end: `${date}T${r.end}:00` }));
 
       for (const operatory of store.getOperatories()) {
+        // Hard: the room must carry any equipment the procedure requires
+        // (e.g. an extraction needs an X-ray-equipped operatory).
+        if (!operatoryHasEquipment(operatory, apptType)) continue;
+
         let cursor = `${date}T${av.hours.start}:00`;
         const dayEnd = `${date}T${av.hours.end}:00`;
 
@@ -125,6 +130,12 @@ function providerCanPerform(provider: Provider, apptType: AppointmentType | unde
   if (apptType.eligibleRoles && !apptType.eligibleRoles.includes(provider.role)) return false;
   if (apptType.requiredSpecialty && !provider.specialties.includes(apptType.requiredSpecialty)) return false;
   return true;
+}
+
+/** Does this operatory carry every piece of equipment the procedure requires? */
+function operatoryHasEquipment(operatory: Operatory, apptType: AppointmentType | undefined): boolean {
+  if (!apptType?.requiredEquipment) return true;
+  return apptType.requiredEquipment.every((e) => operatory.equipment.includes(e));
 }
 
 function durationFor(type: string | null, store: ScheduleStore): number | null {

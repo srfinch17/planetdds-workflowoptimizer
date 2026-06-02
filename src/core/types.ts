@@ -29,6 +29,9 @@ export interface AppointmentType {
   // provider must list. Omitted = any provider qualifies.
   eligibleRoles?: ProviderRole[];
   requiredSpecialty?: string;
+  // HARD operatory requirement: equipment the treatment room must have (e.g.
+  // an extraction needs imaging). Omitted = any operatory works.
+  requiredEquipment?: string[];
 }
 
 export interface Patient {

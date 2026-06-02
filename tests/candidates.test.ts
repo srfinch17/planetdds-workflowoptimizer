@@ -132,3 +132,29 @@ describe("generateCandidates (provider eligibility)", () => {
     expect(got.some((c) => c.providerId === "prov-jones")).toBe(true);
   });
 });
+
+describe("generateCandidates (operatory equipment)", () => {
+  const store = new JsonScheduleStore(SEED_DIR, { persist: false });
+  // op-1/op-2 are X-ray-equipped; op-3 is not.
+  const xrayOps = new Set(
+    store.getOperatories().filter((o) => o.equipment.includes("xray")).map((o) => o.id),
+  );
+
+  it("books an extraction only into an X-ray-equipped operatory", () => {
+    const got = generateCandidates(
+      intent({ appointmentType: "extraction", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      store,
+    );
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.every((c) => xrayOps.has(c.operatoryId))).toBe(true);
+    expect(got.some((c) => c.operatoryId === "op-3")).toBe(false);
+  });
+
+  it("lets a checkup use any operatory, including the non-imaging room", () => {
+    const got = generateCandidates(
+      intent({ appointmentType: "checkup", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      store,
+    );
+    expect(got.some((c) => c.operatoryId === "op-3")).toBe(true);
+  });
+});

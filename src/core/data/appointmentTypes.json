@@ -2,6 +2,6 @@
   { "type": "cleaning", "durationMin": 30, "defaultUrgency": "routine", "eligibleRoles": ["dentist", "hygienist"] },
   { "type": "checkup", "durationMin": 30, "defaultUrgency": "routine", "eligibleRoles": ["dentist", "hygienist"] },
   { "type": "filling", "durationMin": 60, "defaultUrgency": "soon", "eligibleRoles": ["dentist"] },
-  { "type": "extraction", "durationMin": 90, "defaultUrgency": "soon", "eligibleRoles": ["dentist"], "requiredSpecialty": "extraction" },
-  { "type": "emergency", "durationMin": 60, "defaultUrgency": "urgent", "eligibleRoles": ["dentist"] }
+  { "type": "extraction", "durationMin": 90, "defaultUrgency": "soon", "eligibleRoles": ["dentist"], "requiredSpecialty": "extraction", "requiredEquipment": ["xray"] },
+  { "type": "emergency", "durationMin": 60, "defaultUrgency": "urgent", "eligibleRoles": ["dentist"], "requiredEquipment": ["xray"] }
 ]

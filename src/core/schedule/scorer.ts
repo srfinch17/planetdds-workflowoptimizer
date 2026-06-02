@@ -112,14 +112,26 @@ function preferredProviderFactor(
 
 function equipmentFactor(slot: CandidateSlot, store: ScheduleStore): ScoreFactor {
   const weight = 5;
-  const needsXray = slot.type === "extraction" || slot.type === "emergency";
-  if (!needsXray) {
+  // The equipment a procedure needs is data (appointmentTypes.json), not a
+  // hardcoded list — the same policy the candidate generator enforces as a hard
+  // constraint, surfaced here as an explainable confirmation.
+  const required = store.getAppointmentTypes().find((t) => t.type === slot.type)?.requiredEquipment;
+  if (!required || required.length === 0) {
     return factor("operatory_equipment", weight, true, weight, "Standard room is fine", true);
   }
   const op = store.getOperatories().find((o) => o.id === slot.operatoryId);
-  const ok = Boolean(op?.equipment.includes("xray"));
-  const detail = ok ? "in an X-ray-equipped room" : "room lacks X-ray equipment";
+  const ok = required.every((e) => op?.equipment.includes(e) ?? false);
+  const label = required.map(equipmentLabel).join(" + ");
+  const detail = ok ? `in ${anArticle(label)} ${label}-equipped room` : `room lacks ${label}`;
   return factor("operatory_equipment", weight, ok, ok ? weight : 0, detail);
+}
+
+// Display labels for equipment codes (the data uses short codes like "xray").
+function equipmentLabel(code: string): string {
+  return code === "xray" ? "X-ray" : code;
+}
+function anArticle(word: string): string {
+  return /^[aeioux]/i.test(word) ? "an" : "a";
 }
 
 // --- helpers ---
