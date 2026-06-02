@@ -165,11 +165,14 @@ function toHHmm(hourTok: string, minTok: string | undefined, ampm: string | unde
 // --- keyword tables ---
 
 function parseType(text: string): string | null {
-  if (/\b(clean|cleaning|hygiene)\b/.test(text)) return "cleaning";
+  if (/\b(clean|cleaned|cleaning|hygiene)\b/.test(text)) return "cleaning";
   if (/\b(check ?-? ?up|exam)\b/.test(text)) return "checkup";
   if (/\b(cavity|filling|fill)\b/.test(text)) return "filling";
   if (/\b(extract|extraction|pull|wisdom)\b/.test(text)) return "extraction";
-  if (/\b(tooth|teeth|ache|hurt|pain|killing|broke|broken|chipped|cracked|emergency)\b/.test(text)) {
+  // Only genuine symptom/trauma words imply an emergency visit — NOT a bare
+  // mention of "tooth"/"teeth", which appears in routine requests too
+  // ("get my teeth cleaned", "a tooth checkup").
+  if (/\b(ache|aching|hurts?|pain|killing|broke|broken|chipped|cracked|emergency)\b/.test(text)) {
     return "emergency";
   }
   return null;

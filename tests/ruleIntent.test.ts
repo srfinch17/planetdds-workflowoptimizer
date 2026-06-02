@@ -32,6 +32,16 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect(intent.appointmentType).toBe("cleaning");
   });
 
+  it("reads 'get my teeth cleaned' as a cleaning, not an emergency", () => {
+    const intent = extractor.extract("can you get my teeth cleaned next Monday", ctx);
+    expect(intent.appointmentType).toBe("cleaning");
+  });
+
+  it("does not treat a bare mention of 'tooth' as an emergency", () => {
+    const intent = extractor.extract("I have a tooth question for Wednesday", ctx);
+    expect(intent.appointmentType).not.toBe("emergency");
+  });
+
   it("maps 'before noon' to a latest time and 'morning' to partOfDay", () => {
     const a = extractor.extract("something before noon next Tuesday", ctx);
     expect(a.timeLatest).toBe("12:00");

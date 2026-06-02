@@ -1,0 +1,82 @@
+[
+  {
+    "request": "Can I come in next Thursday after 3?",
+    "refDate": "2026-06-01",
+    "expect": { "daysOfWeek": ["Thu"], "timeEarliest": "15:00" }
+  },
+  {
+    "request": "I need a cleaning next Tuesday morning",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "cleaning", "daysOfWeek": ["Tue"], "partOfDay": "morning" }
+  },
+  {
+    "request": "book a filling with Dr. Smith next week",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "filling", "preferredProviderId": "prov-smith" }
+  },
+  {
+    "request": "routine checkup sometime, I'm flexible",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "checkup", "urgency": "routine" }
+  },
+  {
+    "request": "I need an extraction on Friday",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "extraction", "daysOfWeek": ["Fri"] }
+  },
+  {
+    "request": "my tooth is killing me, can I come in this evening?",
+    "refDate": "2026-06-01",
+    "expect": { "urgency": "urgent", "partOfDay": "evening" }
+  },
+  {
+    "request": "a tooth got knocked out and my mouth won't stop bleeding",
+    "refDate": "2026-06-01",
+    "expect": { "urgency": "urgent" }
+  },
+  {
+    "request": "I usually see Dr. Pana — anything next week?",
+    "refDate": "2026-06-01",
+    "expect": { "preferredProviderId": "prov-pana" }
+  },
+  {
+    "request": "cleaning on Monday afternoon please",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "cleaning", "daysOfWeek": ["Mon"], "partOfDay": "afternoon" }
+  },
+  {
+    "request": "swelling and a fever, my face hurts",
+    "refDate": "2026-06-01",
+    "expect": { "urgency": "urgent" }
+  },
+  {
+    "request": "can I get a checkup before noon on Wednesday",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "checkup", "daysOfWeek": ["Wed"], "timeLatest": "12:00" }
+  },
+  {
+    "request": "I'd like a filling sometime soon",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "filling" }
+  },
+  {
+    "request": "wisdom tooth removal next Friday",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "extraction", "daysOfWeek": ["Fri"] }
+  },
+  {
+    "request": "can you get my teeth cleaned next Monday",
+    "refDate": "2026-06-01",
+    "expect": { "appointmentType": "cleaning", "daysOfWeek": ["Mon"] }
+  },
+  {
+    "request": "I want to see Smith on Tuesday",
+    "refDate": "2026-06-01",
+    "expect": { "preferredProviderId": "prov-smith", "daysOfWeek": ["Tue"] }
+  },
+  {
+    "request": "either Wednesday or Thursday next week with Dr. Pana, mornings",
+    "refDate": "2026-06-01",
+    "expect": { "daysOfWeek": ["Wed", "Thu"], "preferredProviderId": "prov-pana", "partOfDay": "morning" }
+  }
+]

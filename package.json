@@ -6,6 +6,7 @@
   "scripts": {
     "cli": "tsx src/cli/index.ts",
     "scenarios": "tsx src/cli/scenarios.ts",
+    "eval": "tsx src/eval/runEval.ts",
     "server": "tsx src/server/index.ts",
     "logs:reset": "node -e \"require('fs').writeFileSync('logs/events.jsonl','')\"",
     "typecheck": "tsc --noEmit",
