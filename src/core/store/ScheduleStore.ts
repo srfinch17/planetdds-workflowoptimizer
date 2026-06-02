@@ -27,6 +27,9 @@ export interface ScheduleStore {
   /** Persist a new availability rule (e.g., admin-added "Dr. X lunch 11-12:30"). */
   addRule(rule: AvailabilityRule): void;
 
+  /** Remove an availability rule by id. Returns true if one was removed. */
+  removeRule(id: string): boolean;
+
   /** Book a candidate slot for a patient; returns the created appointment. */
   book(slot: CandidateSlot, patientId: string): Appointment;
 

@@ -1,4 +1,4 @@
 [
-  { "id": "rule-001", "providerId": "prov-smith", "kind": "block", "recurrence": "daily", "start": "11:00", "end": "12:30", "reason": "lunch" },
-  { "id": "rule-002", "providerId": "prov-pana", "kind": "dayoff", "weekday": "Fri", "reason": "never works Fridays" }
+  { "id": "rule-001", "providerId": "prov-smith", "kind": "block", "recurrence": "daily", "start": "11:00", "end": "12:30", "reason": "lunch", "createdAt": "2026-05-01T09:00:00.000Z" },
+  { "id": "rule-002", "providerId": "prov-pana", "kind": "dayoff", "weekday": "Fri", "reason": "never works Fridays", "createdAt": "2026-05-01T09:00:00.000Z" }
 ]

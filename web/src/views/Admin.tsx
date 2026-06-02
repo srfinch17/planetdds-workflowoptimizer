@@ -12,6 +12,7 @@ import { Calendar } from '../components/Calendar'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { Dashboard } from '../components/Dashboard'
 import { RuleTeacher } from '../components/RuleTeacher'
+import { RulesList } from '../components/RulesList'
 import { CallbackQueue } from '../components/CallbackQueue'
 import { LogPanel } from '../components/LogPanel'
 
@@ -118,6 +119,8 @@ export function Admin() {
       )}
 
       <RuleTeacher onApplied={reload} />
+
+      {state && <RulesList providers={state.providers} rules={state.rules} onChange={reload} />}
 
       <LogPanel />
     </div>

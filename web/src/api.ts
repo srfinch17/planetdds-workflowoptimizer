@@ -236,6 +236,12 @@ export async function postRule(sentence: string, override = false): Promise<Post
   return { ok: true, ...data }
 }
 
+export function deleteRule(id: string): Promise<{ rules: AvailabilityRule[] }> {
+  return fetch(`/api/rules/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) =>
+    jsonOrThrow<{ rules: AvailabilityRule[] }>(r),
+  )
+}
+
 export function resetSystem(): Promise<{ ok: boolean }> {
   return fetch('/api/reset', { method: 'POST' }).then((r) => jsonOrThrow<{ ok: boolean }>(r))
 }

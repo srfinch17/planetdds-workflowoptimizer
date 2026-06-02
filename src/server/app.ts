@@ -245,6 +245,15 @@ export function createApp(deps: AppDeps): Hono {
     return c.json({ rule, source: parsed.source, rules: store.getRules() });
   });
 
+  // Delete a rule by id (admin removing/superseding a scheduling rule).
+  app.delete("/api/rules/:id", (c) => {
+    const id = c.req.param("id");
+    const removed = store.removeRule(id);
+    if (!removed) return c.json({ error: "no rule with that id" }, 404);
+    eventLog.record("rule_added", { outcome: "removed", ruleId: id });
+    return c.json({ rules: store.getRules() });
+  });
+
   // Reset the whole system to its seed defaults — drops runtime bookings + rules,
   // clears the log and the callback queue. A testing convenience.
   app.post("/api/reset", (c) => {
