@@ -405,30 +405,49 @@
   color: var(--good);
 }
 
-.patient-row {
+/* Prominent patient-details bar at the top — you need this to book a time. */
+.patient-id {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   flex-wrap: wrap;
-  font-size: 13px;
+}
+.patient-id__label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--ink-soft);
 }
-.patient-row label {
-  display: inline-flex;
+.patient-id__field {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  flex: 1 1 200px;
 }
-.patient-row input {
+.patient-id__field input {
   font: inherit;
-  padding: 6px 10px;
+  flex: 1;
+  padding: 9px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 9px;
+  background: var(--panel);
   color: var(--ink);
-  min-width: 160px;
 }
-.patient-row input:focus {
-  outline: 2px solid var(--brand);
+.patient-id__field input:focus {
+  outline: none;
   border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.patient-id__status {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.patient-id__status--ok {
+  color: var(--good);
 }
 
 /* ---------- emergency escalation ---------- */
@@ -684,81 +703,10 @@
   font-size: 12px;
   color: var(--ink-soft);
 }
-/* Bookable open times for the selected day, grouped by dentist. */
-.open-times {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.open-times__empty {
-  font-size: 13px;
-  color: var(--ink-soft);
-}
-.open-times__hint {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
+/* "click any to book" cue on the day-grid label. */
+.field-label__cta {
   color: var(--brand);
-}
-.open-prov {
-  display: grid;
-  grid-template-columns: 116px 1fr;
-  gap: 10px;
-  align-items: start;
-}
-.open-prov__name {
   font-weight: 700;
-  font-size: 13px;
-  padding: 5px 9px;
-  border-radius: 7px;
-  border-left: 3px solid transparent;
-}
-.open-prov__name--a { color: var(--prov-a); background: var(--prov-a-soft); border-left-color: var(--prov-a); }
-.open-prov__name--b { color: var(--prov-b); background: var(--prov-b-soft); border-left-color: var(--prov-b); }
-.open-prov__name--c { color: var(--prov-c); background: var(--prov-c-soft); border-left-color: var(--prov-c); }
-.open-prov__times {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-.open-slot {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  cursor: pointer;
-  font: inherit;
-  transition: border-color 0.12s, transform 0.12s, box-shadow 0.12s;
-}
-.open-slot:not(:disabled):hover {
-  border-color: var(--brand);
-  transform: translateY(-1px);
-  box-shadow: var(--glow);
-}
-.open-slot:disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-.open-slot__time {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 13px;
-}
-.open-slot__cta {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--brand);
-}
-.open-slot--booked {
-  background: var(--good-bg);
-}
-.open-slot--booked .open-slot__cta {
-  color: var(--good);
 }
 .calendar-toolbar {
   display: flex;

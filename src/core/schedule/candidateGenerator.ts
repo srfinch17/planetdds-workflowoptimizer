@@ -11,7 +11,7 @@ import type { ScheduleStore } from "../store/ScheduleStore";
 import { addMinutes, overlaps, toIso, weekdayOf, withinHours } from "../time";
 import { resolveAvailability, officeClosure } from "./availability";
 
-const SLOT_STEP_MIN = 15; // granularity of candidate start times
+const SLOT_STEP_MIN = 30; // granularity of candidate start times (also the booking grid step)
 const DEFAULT_DURATION_MIN = 30;
 const DEFAULT_HORIZON_DAYS = 5; // how far ahead to search when no latestDate given
 

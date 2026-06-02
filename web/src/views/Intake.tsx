@@ -158,7 +158,6 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
 
   const slots = result?.recommendation.slots ?? []
   const rankOf = new Map(slots.map((s, i) => [slotKey(s), i + 1]))
-  const slotByKey = new Map(slots.map((s) => [slotKey(s), s]))
 
   // Split into "your dentist" vs alternatives when a provider was requested.
   const pref = result?.recommendation.preferredProviderId ?? null
@@ -167,10 +166,13 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
 
   const calendarDay = slots[0]?.slot.start.slice(0, 10) ?? result?.intent.earliestDate ?? TODAY
   const dayShown = viewDay ?? calendarDay
-  const highlights = new Set(slots.map(slotKey))
   const recommendedDays = new Set(slots.map((s) => s.slot.start.slice(0, 10)))
   const bookedKeys = new Set(Object.keys(booked).filter((k) => booked[k]))
+  // EVERY open time on the shown day is a bookable ★ in the grid (not just the
+  // top 3) — keyed provider@start so the day grid can place + book each one.
   const openSlotsForDay = daySlots[dayShown] ?? []
+  const openByKey = new Map(openSlotsForDay.map((s) => [`${s.providerId}@${s.start}`, s]))
+  const highlights = new Set(openByKey.keys())
 
   const renderCard = (s: ScoredSlot) => (
     <SlotCard
@@ -216,6 +218,30 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
             {loading ? 'Finding…' : '🔍 Find appointments'}
           </button>
         </div>
+      </section>
+
+      <section className="card patient-id">
+        <span className="patient-id__label">🧑‍⚕️ Patient details</span>
+        <label className="patient-id__field">
+          👤
+          <input
+            ref={nameRef}
+            value={patientName}
+            onChange={(e) => setPatientName(e.target.value)}
+            placeholder="Full name"
+          />
+        </label>
+        <label className="patient-id__field">
+          📞
+          <input
+            value={patientPhone}
+            onChange={(e) => setPatientPhone(e.target.value)}
+            placeholder="Phone"
+          />
+        </label>
+        <span className={`patient-id__status ${canBook ? 'patient-id__status--ok' : ''}`}>
+          {canBook ? '✓ ready to book' : 'needed to book a time'}
+        </span>
       </section>
 
       {error && <div className="banner banner--error">{error}</div>}
@@ -280,27 +306,6 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
             )}
           </section>
 
-          <div className="patient-row">
-            <span className="tile-sub">Your details (to confirm the booking):</span>
-            <label>
-              👤
-              <input
-                ref={nameRef}
-                value={patientName}
-                onChange={(e) => setPatientName(e.target.value)}
-                placeholder="Full name"
-              />
-            </label>
-            <label>
-              📞
-              <input
-                value={patientPhone}
-                onChange={(e) => setPatientPhone(e.target.value)}
-                placeholder="Phone"
-              />
-            </label>
-          </div>
-
           {providers.length > 0 && (
             <section className="calendar-panel">
               <span className="field-label">🗓️ Where these land — pick a day to view</span>
@@ -322,7 +327,10 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
                   Showing only the days this request asked for — greyed days aren’t available.
                 </p>
               )}
-              <span className="field-label">📆 {fmtWeekday(`${dayShown}T00:00:00`)} {fmtDate(`${dayShown}T00:00:00`)} — available times</span>
+              <span className="field-label">
+                📆 {fmtWeekday(`${dayShown}T00:00:00`)} {fmtDate(`${dayShown}T00:00:00`)} — available times ·{' '}
+                <span className="field-label__cta">★ click any to book</span>
+              </span>
               <Calendar
                 providers={providers}
                 appointments={appointments}
@@ -331,78 +339,14 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
                 highlights={highlights}
                 bookedKeys={bookedKeys}
                 onBookSlot={(key) => {
-                  const s = slotByKey.get(key)
-                  if (s) book(s)
+                  const s = openByKey.get(key)
+                  if (s) bookSlot(s)
                 }}
-              />
-              <OpenTimes
-                slots={openSlotsForDay}
-                providers={providers}
-                booked={booked}
-                canBook={canBook}
-                onBook={bookSlot}
               />
             </section>
           )}
         </>
       )}
-    </div>
-  )
-}
-
-// Per-dentist color slot, by roster order — the SAME mapping the calendars use.
-const PALETTE = ['a', 'b', 'c', 'a', 'b', 'c']
-
-// The full list of bookable openings on the shown day, grouped by dentist — so a
-// patient can book ANY open time, not just the three recommended slots. A chip is
-// always clickable; if patient details are missing the click guides them there.
-function OpenTimes({
-  slots,
-  providers,
-  booked,
-  canBook,
-  onBook,
-}: {
-  slots: CandidateSlot[]
-  providers: Provider[]
-  booked: Record<string, string>
-  canBook: boolean
-  onBook: (slot: CandidateSlot) => void
-}) {
-  if (slots.length === 0) {
-    return <p className="open-times__empty">No open times on this day — pick another.</p>
-  }
-  const groups = providers
-    .map((p, idx) => ({ p, color: PALETTE[idx % PALETTE.length], list: slots.filter((s) => s.providerId === p.id) }))
-    .filter((g) => g.list.length > 0)
-  return (
-    <div className="open-times">
-      {!canBook && (
-        <p className="open-times__hint">↑ Add your name and phone above, then click a time to book.</p>
-      )}
-      {groups.map(({ p, color, list }) => (
-        <div key={p.id} className="open-prov">
-          <span className={`open-prov__name open-prov__name--${color}`}>{p.name}</span>
-          <div className="open-prov__times">
-            {list.map((s) => {
-              const key = `${s.providerId}@${s.start}`
-              const conf = booked[key]
-              return (
-                <button
-                  key={key}
-                  className={`open-slot${conf ? ' open-slot--booked' : ''}`}
-                  disabled={!!conf}
-                  title={conf ? `Booked · ${conf}` : 'Book this time'}
-                  onClick={() => onBook(s)}
-                >
-                  <span className="open-slot__time">{fmtTime(s.start)}</span>
-                  <span className="open-slot__cta">{conf ? '✓' : 'book'}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      ))}
     </div>
   )
 }
