@@ -2,9 +2,10 @@ import { useState } from 'react'
 import './App.css'
 import { Intake } from './views/Intake'
 import { Admin } from './views/Admin'
+import { Metrics } from './views/Metrics'
 import { ThemeToggle } from './components/ThemeToggle'
 
-type Tab = 'intake' | 'admin'
+type Tab = 'intake' | 'admin' | 'metrics'
 
 /**
  * App shell: a header and two tabs.
@@ -38,12 +39,20 @@ function App() {
             className={`tab ${tab === 'admin' ? 'tab--active' : ''}`}
             onClick={() => setTab('admin')}
           >
-            📊 Admin Dashboard
+            🛠️ Admin
+          </button>
+          <button
+            className={`tab ${tab === 'metrics' ? 'tab--active' : ''}`}
+            onClick={() => setTab('metrics')}
+          >
+            📊 Metrics
           </button>
         </nav>
       </header>
 
-      <main className="app-main">{tab === 'intake' ? <Intake /> : <Admin />}</main>
+      <main className="app-main">
+        {tab === 'intake' ? <Intake /> : tab === 'admin' ? <Admin /> : <Metrics />}
+      </main>
     </div>
   )
 }

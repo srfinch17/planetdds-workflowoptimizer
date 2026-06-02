@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   getState,
-  getMetrics,
   getCallbacks,
   resetSystem,
   type StateResponse,
-  type MetricsResponse,
   type CallbackRecord,
 } from '../api'
 import { Calendar } from '../components/Calendar'
 import { MonthCalendar } from '../components/MonthCalendar'
-import { Dashboard } from '../components/Dashboard'
 import { RuleTeacher } from '../components/RuleTeacher'
 import { RulesList } from '../components/RulesList'
 import { CallbackQueue } from '../components/CallbackQueue'
 import { RescheduleQueue } from '../components/RescheduleQueue'
-import { LogPanel } from '../components/LogPanel'
 
 // The seed calendar has its appointments on this Thursday — a sensible default
 // so the grid opens with something to look at.
@@ -33,17 +29,15 @@ const MAX_MONTH = '2027-06'
 export function Admin() {
   const [day, setDay] = useState(DEFAULT_DAY)
   const [state, setState] = useState<StateResponse | null>(null)
-  const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
   const [callbacks, setCallbacks] = useState<CallbackRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const reload = useCallback(() => {
     setLoading(true)
-    Promise.all([getState(), getMetrics(), getCallbacks()])
-      .then(([s, m, cb]) => {
+    Promise.all([getState(), getCallbacks()])
+      .then(([s, cb]) => {
         setState(s)
-        setMetrics(m)
         setCallbacks(cb.callbacks)
         setError(null)
       })
@@ -91,8 +85,6 @@ export function Admin() {
 
       {error && <div className="banner banner--error">{error}</div>}
 
-      {state && metrics && <Dashboard metrics={metrics} state={state} day={day} />}
-
       <CallbackQueue callbacks={callbacks} />
 
       {state && <RescheduleQueue records={state.reschedule} providers={state.providers} patients={state.patients} />}
@@ -124,8 +116,6 @@ export function Admin() {
       <RuleTeacher onApplied={reload} />
 
       {state && <RulesList providers={state.providers} rules={state.rules} onChange={reload} />}
-
-      <LogPanel />
     </div>
   )
 }
