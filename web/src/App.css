@@ -841,13 +841,22 @@
 .cal-block--appt small {
   color: var(--appt-ink-soft);
 }
+/* A plain open time — available, but understated. */
 .cal-block--hl {
-  background: var(--good-bg);
+  background: transparent;
   color: var(--good);
-  border: 1.5px solid var(--good);
-  font-weight: 700;
+  border: 1px dashed var(--good);
+  font-weight: 600;
+  opacity: 0.8;
   align-items: center;
   z-index: 2;
+}
+/* The AI's top picks — solid fill + ★, so they stand out among the open times. */
+.cal-block--hl.cal-block--rec {
+  background: var(--good-bg);
+  border: 1.5px solid var(--good);
+  font-weight: 700;
+  opacity: 1;
 }
 
 /* ---------- dashboard ---------- */

@@ -337,6 +337,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
                 rules={rules}
                 day={dayShown}
                 highlights={highlights}
+                recommendedKeys={new Set(slots.map(slotKey))}
                 bookedKeys={bookedKeys}
                 onBookSlot={(key) => {
                   const s = openByKey.get(key)

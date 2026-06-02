@@ -33,8 +33,9 @@ export interface CalendarProps {
   appointments: Appointment[]
   rules: AvailabilityRule[]
   day: string // "YYYY-MM-DD"
-  highlights?: Set<string> // `${providerId}@${startISO}` — recommended slots to light up
-  bookedKeys?: Set<string> // recommended slots already booked (shown as ✓)
+  highlights?: Set<string> // `${providerId}@${startISO}` — every open slot to light up as bookable
+  recommendedKeys?: Set<string> // the AI's top picks among highlights — get a ★
+  bookedKeys?: Set<string> // slots already booked (shown as ✓)
   onBookSlot?: (key: string) => void // when set, highlights become Book buttons
 }
 
@@ -51,6 +52,7 @@ export function Calendar({
   rules,
   day,
   highlights,
+  recommendedKeys,
   bookedKeys,
   onBookSlot,
 }: CalendarProps) {
@@ -160,25 +162,28 @@ export function Calendar({
             gridRow: `${line(isoToMin(start))} / ${line(isoToMin(start) + STEP)}`,
           }
           const isBooked = bookedKeys?.has(key) ?? false
-          // When the parent passes onBookSlot, recommended slots are clickable
-          // Book buttons; otherwise they're static highlights (e.g. on Admin).
+          // The AI's top picks get a ★ and extra emphasis; every other open time
+          // is a plain "book" button.
+          const isRec = recommendedKeys?.has(key) ?? false
+          // When the parent passes onBookSlot, slots are clickable Book buttons;
+          // otherwise they're static highlights (e.g. on Admin).
           if (onBookSlot) {
             return (
               <button
                 key={`hl-${key}`}
-                className={`cal-block cal-block--hl${isBooked ? ' is-booked' : ''}`}
+                className={`cal-block cal-block--hl${isRec ? ' cal-block--rec' : ''}${isBooked ? ' is-booked' : ''}`}
                 style={style}
                 disabled={isBooked}
-                title={isBooked ? 'Booked' : 'Book this recommended slot'}
+                title={isBooked ? 'Booked' : isRec ? 'Book this recommended slot' : 'Book this time'}
                 onClick={() => onBookSlot(key)}
               >
-                {isBooked ? '✓ booked' : '★ book'}
+                {isBooked ? '✓ booked' : isRec ? '★ book' : 'book'}
               </button>
             )
           }
           return (
-            <div key={`hl-${key}`} className="cal-block cal-block--hl" style={style}>
-              ★ recommended
+            <div key={`hl-${key}`} className={`cal-block cal-block--hl${isRec ? ' cal-block--rec' : ''}`} style={style}>
+              {isRec ? '★ recommended' : 'open'}
             </div>
           )
         })}
