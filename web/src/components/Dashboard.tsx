@@ -128,17 +128,24 @@ export function Dashboard({
       <div className="card util">
         <span className="tile-label">🦷 Provider utilization · {day}</span>
         <div className="util-rows">
-          {utils.map((u) => (
-            <div key={u.name} className="util-row">
-              <div className="util-name">
-                {u.name} <small>{u.role}</small>
+          {utils.map((u, i) => {
+            const color = ['a', 'b', 'c'][i % 3]
+            return (
+              <div key={u.name} className="util-row">
+                <div className="util-name">
+                  <span className={`util-dot util-dot--${color}`} />
+                  {u.name} <small>{u.role}</small>
+                </div>
+                <div className="util-bar">
+                  <div
+                    className={`util-bar__fill util-bar__fill--${color}`}
+                    style={{ width: `${Math.min(100, u.pct)}%` }}
+                  />
+                </div>
+                <div className="util-val">{u.off ? 'off' : `${u.pct}%`}</div>
               </div>
-              <div className="util-bar">
-                <div className="util-bar__fill" style={{ width: `${Math.min(100, u.pct)}%` }} />
-              </div>
-              <div className="util-val">{u.off ? 'off' : `${u.pct}%`}</div>
-            </div>
-          ))}
+            )
+          })}
         </div>
         <span className="tile-sub">booked minutes ÷ available minutes (working hours minus lunch)</span>
       </div>

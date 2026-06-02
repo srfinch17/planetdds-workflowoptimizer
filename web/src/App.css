@@ -1058,7 +1058,8 @@
   stroke: var(--good);
   stroke-width: 12;
   stroke-linecap: round;
-  transition: stroke-dasharray 0.4s ease;
+  filter: drop-shadow(0 0 4px var(--good));
+  transition: stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .donut-num {
   font-size: 22px;
@@ -1093,23 +1094,40 @@
 .util-name {
   font-size: 13px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 .util-name small {
   font-weight: 500;
   color: var(--ink-soft);
 }
+/* a colored dot ties each row to that dentist's calendar color */
+.util-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.util-dot--a { background: var(--prov-a); box-shadow: 0 0 6px var(--prov-a); }
+.util-dot--b { background: var(--prov-b); box-shadow: 0 0 6px var(--prov-b); }
+.util-dot--c { background: var(--prov-c); box-shadow: 0 0 6px var(--prov-c); }
 .util-bar {
   background: var(--soft);
   border-radius: 999px;
   height: 12px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
 }
 .util-bar__fill {
-  background: linear-gradient(90deg, var(--brand), var(--brand-dark));
   height: 100%;
   border-radius: 999px;
-  transition: width 0.4s ease;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* per-dentist fill, matched to the calendar (Smith green · Pana violet · Jones amber) */
+.util-bar__fill--a { background: linear-gradient(90deg, color-mix(in srgb, var(--prov-a) 78%, #000), var(--prov-a)); }
+.util-bar__fill--b { background: linear-gradient(90deg, color-mix(in srgb, var(--prov-b) 78%, #000), var(--prov-b)); }
+.util-bar__fill--c { background: linear-gradient(90deg, color-mix(in srgb, var(--prov-c) 78%, #000), var(--prov-c)); }
 .util-val {
   font-size: 13px;
   font-weight: 700;
