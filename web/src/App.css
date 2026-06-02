@@ -773,6 +773,16 @@
   border-bottom: 1px dashed var(--soft);
 }
 
+/* Per-dentist color, matched to the month calendar by roster order. The header
+   carries the strong signal (name + tinted bg + a thick colored underline); the
+   column body gets only a whisper of tint so appointment blocks still pop. */
+.cal-head--a { color: var(--prov-a); background: var(--prov-a-soft); border-bottom: 3px solid var(--prov-a); }
+.cal-head--b { color: var(--prov-b); background: var(--prov-b-soft); border-bottom: 3px solid var(--prov-b); }
+.cal-head--c { color: var(--prov-c); background: var(--prov-c-soft); border-bottom: 3px solid var(--prov-c); }
+.cal-cell--a { background: color-mix(in srgb, var(--prov-a) 7%, transparent); }
+.cal-cell--b { background: color-mix(in srgb, var(--prov-b) 7%, transparent); }
+.cal-cell--c { background: color-mix(in srgb, var(--prov-c) 7%, transparent); }
+
 .cal-block {
   margin: 1px 2px;
   border-radius: 5px;

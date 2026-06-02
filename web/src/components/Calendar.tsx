@@ -8,6 +8,11 @@ const CLOSE_MIN = 17 * 60 // 17:00
 const STEP = 30
 const ROWS = (CLOSE_MIN - OPEN_MIN) / STEP // 18 rows
 
+// Color slot per dentist, by their order in the roster — the SAME mapping the
+// month calendar uses, so a given doctor reads as one color across both views.
+const PALETTE = ['a', 'b', 'c', 'a', 'b', 'c']
+const colorAt = (idx: number) => PALETTE[idx % PALETTE.length]
+
 function hhmmToMin(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number)
   return h * 60 + m
@@ -67,7 +72,7 @@ export function Calendar({
     >
       <div className="cal-corner" />
       {providers.map((p, idx) => (
-        <div key={p.id} className="cal-head" style={{ gridColumn: 2 + idx, gridRow: 1 }}>
+        <div key={p.id} className={`cal-head cal-head--${colorAt(idx)}`} style={{ gridColumn: 2 + idx, gridRow: 1 }}>
           {p.name}
           <small>{p.role}</small>
         </div>
@@ -81,7 +86,7 @@ export function Calendar({
 
       {providers.map((_, idx) =>
         timeLabels.map((_t, i) => (
-          <div key={`bg-${idx}-${i}`} className="cal-cell" style={{ gridColumn: 2 + idx, gridRow: 2 + i }} />
+          <div key={`bg-${idx}-${i}`} className={`cal-cell cal-cell--${colorAt(idx)}`} style={{ gridColumn: 2 + idx, gridRow: 2 + i }} />
         )),
       )}
 
