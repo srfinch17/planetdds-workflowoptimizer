@@ -684,23 +684,50 @@
   font-size: 12px;
   color: var(--ink-soft);
 }
-/* Bookable open times for the selected day. */
+/* Bookable open times for the selected day, grouped by dentist. */
 .open-times {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  gap: 12px;
 }
 .open-times__empty {
   font-size: 13px;
   color: var(--ink-soft);
 }
+.open-times__hint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+}
+.open-prov {
+  display: grid;
+  grid-template-columns: 116px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.open-prov__name {
+  font-weight: 700;
+  font-size: 13px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border-left: 3px solid transparent;
+}
+.open-prov__name--a { color: var(--prov-a); background: var(--prov-a-soft); border-left-color: var(--prov-a); }
+.open-prov__name--b { color: var(--prov-b); background: var(--prov-b-soft); border-left-color: var(--prov-b); }
+.open-prov__name--c { color: var(--prov-c); background: var(--prov-c-soft); border-left-color: var(--prov-c); }
+.open-prov__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
 .open-slot {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 11px;
+  gap: 6px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--panel);
   cursor: pointer;
   font: inherit;
@@ -720,12 +747,8 @@
   font-weight: 700;
   font-size: 13px;
 }
-.open-slot__who {
-  font-size: 12px;
-  color: var(--ink-soft);
-}
 .open-slot__cta {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;

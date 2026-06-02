@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   postSchedule,
   getState,
@@ -52,6 +52,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const [viewDay, setViewDay] = useState<string | null>(null) // day shown in the detail grid
   const [daySlots, setDaySlots] = useState<Record<string, CandidateSlot[]>>({}) // open slots per day
   const [selectableDays, setSelectableDays] = useState<Set<string> | null>(null) // null = no restriction
+  const nameRef = useRef<HTMLInputElement>(null) // focused when a booking needs patient details
 
   const loadState = useCallback(() => {
     getState()
@@ -131,7 +132,14 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const canBook = patientName.trim().length > 0 && patientPhone.trim().length > 0
 
   async function bookSlot(slot: CandidateSlot) {
-    if (!canBook) return
+    if (!canBook) {
+      // Don't silently no-op — point the patient at the missing details.
+      setError('Add your name and phone first, then click a time to book.')
+      nameRef.current?.focus()
+      nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setError(null)
     const key = `${slot.providerId}@${slot.start}`
     try {
       const res = await postBook(slot, { name: patientName.trim(), phone: patientPhone.trim() }, result?.requestId)
@@ -172,7 +180,6 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
       providerName={providerName(s.slot.providerId)}
       isPreferred={!!pref && s.slot.providerId === pref}
       confirmation={booked[slotKey(s)]}
-      canBook={canBook}
       onBook={() => book(s)}
     />
   )
@@ -278,6 +285,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
             <label>
               👤
               <input
+                ref={nameRef}
                 value={patientName}
                 onChange={(e) => setPatientName(e.target.value)}
                 placeholder="Full name"
@@ -329,7 +337,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
               />
               <OpenTimes
                 slots={openSlotsForDay}
-                providerName={providerName}
+                providers={providers}
                 booked={booked}
                 canBook={canBook}
                 onBook={bookSlot}
@@ -342,17 +350,21 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   )
 }
 
-// The full list of bookable openings on the shown day — so a patient can book
-// ANY open time, not just the three recommended slots.
+// Per-dentist color slot, by roster order — the SAME mapping the calendars use.
+const PALETTE = ['a', 'b', 'c', 'a', 'b', 'c']
+
+// The full list of bookable openings on the shown day, grouped by dentist — so a
+// patient can book ANY open time, not just the three recommended slots. A chip is
+// always clickable; if patient details are missing the click guides them there.
 function OpenTimes({
   slots,
-  providerName,
+  providers,
   booked,
   canBook,
   onBook,
 }: {
   slots: CandidateSlot[]
-  providerName: (id: string) => string
+  providers: Provider[]
   booked: Record<string, string>
   canBook: boolean
   onBook: (slot: CandidateSlot) => void
@@ -360,25 +372,37 @@ function OpenTimes({
   if (slots.length === 0) {
     return <p className="open-times__empty">No open times on this day — pick another.</p>
   }
+  const groups = providers
+    .map((p, idx) => ({ p, color: PALETTE[idx % PALETTE.length], list: slots.filter((s) => s.providerId === p.id) }))
+    .filter((g) => g.list.length > 0)
   return (
     <div className="open-times">
-      {slots.map((s) => {
-        const key = `${s.providerId}@${s.start}`
-        const conf = booked[key]
-        return (
-          <button
-            key={key}
-            className={`open-slot${conf ? ' open-slot--booked' : ''}`}
-            disabled={!!conf || !canBook}
-            title={conf ? `Booked · ${conf}` : canBook ? 'Book this time' : 'Enter name + phone above to book'}
-            onClick={() => onBook(s)}
-          >
-            <span className="open-slot__time">{fmtTime(s.start)}</span>
-            <span className="open-slot__who">{providerName(s.providerId)}</span>
-            <span className="open-slot__cta">{conf ? '✓ booked' : 'book'}</span>
-          </button>
-        )
-      })}
+      {!canBook && (
+        <p className="open-times__hint">↑ Add your name and phone above, then click a time to book.</p>
+      )}
+      {groups.map(({ p, color, list }) => (
+        <div key={p.id} className="open-prov">
+          <span className={`open-prov__name open-prov__name--${color}`}>{p.name}</span>
+          <div className="open-prov__times">
+            {list.map((s) => {
+              const key = `${s.providerId}@${s.start}`
+              const conf = booked[key]
+              return (
+                <button
+                  key={key}
+                  className={`open-slot${conf ? ' open-slot--booked' : ''}`}
+                  disabled={!!conf}
+                  title={conf ? `Booked · ${conf}` : 'Book this time'}
+                  onClick={() => onBook(s)}
+                >
+                  <span className="open-slot__time">{fmtTime(s.start)}</span>
+                  <span className="open-slot__cta">{conf ? '✓' : 'book'}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -460,7 +484,6 @@ function SlotCard({
   providerName,
   isPreferred,
   confirmation,
-  canBook,
   onBook,
 }: {
   rank: number
@@ -468,7 +491,6 @@ function SlotCard({
   providerName: string
   isPreferred: boolean
   confirmation?: string
-  canBook: boolean
   onBook: () => void
 }) {
   const booked = !!confirmation
@@ -515,7 +537,7 @@ function SlotCard({
         ))}
       </ul>
 
-      <button className="btn btn--book" onClick={onBook} disabled={booked || !canBook}>
+      <button className="btn btn--book" onClick={onBook} disabled={booked}>
         {booked ? `✓ Booked · ${confirmation}` : '📌 Book this slot'}
       </button>
     </article>
