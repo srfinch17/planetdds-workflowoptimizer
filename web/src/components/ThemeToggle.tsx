@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Dropdown } from './Dropdown'
 
 type Choice = 'light' | 'dark' | 'system'
 
@@ -35,17 +36,25 @@ export function ThemeToggle() {
   }, [choice])
 
   return (
-    <label className="theme-toggle" title="Color theme">
-      <span className="theme-toggle__icon">{resolve(choice) === 'dark' ? '🌙' : '☀️'}</span>
-      <select
-        value={choice}
-        onChange={(e) => setChoice(e.target.value as Choice)}
-        aria-label="Color theme"
-      >
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-    </label>
+    <Dropdown
+      className="theme-dd"
+      ariaLabel="Color theme"
+      value={choice}
+      onChange={(v) => setChoice(v as Choice)}
+      options={[
+        { value: 'system', label: <Opt icon="🖥️" text="System" /> },
+        { value: 'light', label: <Opt icon="☀️" text="Light" /> },
+        { value: 'dark', label: <Opt icon="🌙" text="Dark" /> },
+      ]}
+    />
+  )
+}
+
+function Opt({ icon, text }: { icon: string; text: string }) {
+  return (
+    <>
+      <span className="dd-emoji">{icon}</span>
+      {text}
+    </>
   )
 }
