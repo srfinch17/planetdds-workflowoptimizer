@@ -93,6 +93,24 @@ describe("Hono backend API", () => {
     expect(body.pathCounts).toBeDefined();
   });
 
+  it("POST /api/reset returns the metrics dashboard to a clean slate", async () => {
+    await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "cleaning next Thursday", refDate: "2026-05-31" }),
+    });
+    const before = (await (await app.request("/api/metrics")).json()) as any;
+    expect(before.requestsServed).toBeGreaterThanOrEqual(1);
+
+    await app.request("/api/reset", { method: "POST" });
+
+    const after = (await (await app.request("/api/metrics")).json()) as any;
+    expect(after.requestsServed).toBe(0);
+    expect(after.apiCalls).toBe(0);
+    expect(after.estimatedUsd).toBe(0);
+    expect(after.avgLatencyMs).toBe(0);
+  });
+
   it("POST /api/schedule escalates a medical emergency and queues a staff callback", async () => {
     const res = await app.request("/api/schedule", {
       method: "POST",

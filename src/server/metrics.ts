@@ -19,4 +19,9 @@ export class LatencyMeter {
   get avgMs(): number {
     return this.n === 0 ? 0 : this.totalMs / this.n;
   }
+
+  reset(): void {
+    this.totalMs = 0;
+    this.n = 0;
+  }
 }

@@ -306,6 +306,13 @@ export function createApp(deps: AppDeps): Hono {
     eventLog.reset();
     callbacks.length = 0;
     reschedule.length = 0;
+    // "Reset to default" means a clean slate everywhere — including the cost /
+    // efficiency dashboard, not just the store and the log.
+    costTracker.reset();
+    latency.reset();
+    (Object.keys(tiered.pathCounts) as (keyof typeof tiered.pathCounts)[]).forEach((k) => {
+      tiered.pathCounts[k] = 0;
+    });
     return c.json({ ok: true });
   });
 
