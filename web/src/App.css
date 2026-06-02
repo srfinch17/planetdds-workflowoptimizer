@@ -100,7 +100,8 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  /* a hairline of light along the top edge gives panels subtle "lit" depth */
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.045);
   padding: 18px;
 }
 
@@ -124,13 +125,19 @@
   opacity: 0.55;
   cursor: default;
 }
+/* tactile press on every button */
+.btn:not(:disabled):active {
+  transform: translateY(1px);
+}
 .btn--primary {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
+  background: linear-gradient(180deg, var(--brand), var(--brand-dark));
+  border-color: var(--brand-dark);
+  color: var(--on-brand);
+  font-weight: 700;
 }
 .btn--primary:not(:disabled):hover {
-  background: var(--brand-dark);
+  filter: brightness(1.06);
+  box-shadow: var(--glow);
 }
 .btn--book {
   width: 100%;
@@ -839,11 +846,53 @@
 
 .calendar {
   display: grid;
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+/* Live "now" line — the hallmark of a real scheduling product. */
+.cal-now {
+  position: absolute;
+  left: 60px;
+  right: 0;
+  height: 0;
+  border-top: 2px solid var(--brand);
+  box-shadow: 0 0 10px var(--brand);
+  z-index: 6;
+  pointer-events: none;
+}
+.cal-now::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 8px var(--brand);
+  animation: nowPulse 2.4s ease-in-out infinite;
+}
+@keyframes nowPulse {
+  0%, 100% { box-shadow: 0 0 6px var(--brand); }
+  50% { box-shadow: 0 0 13px var(--brand); }
+}
+.cal-now__label {
+  position: absolute;
+  left: -54px;
+  top: -8px;
+  width: 48px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--on-brand);
+  background: var(--brand);
+  border-radius: 4px;
+  padding: 1px 3px;
 }
 .cal-corner {
   grid-column: 1;
@@ -1482,6 +1531,26 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+/* cancel/reschedule + the booking calendar fade up the same way as results */
+.manage,
+.calendar-panel {
+  animation: riseIn 0.4s ease backwards;
+}
+.manage-row {
+  animation: riseIn 0.4s ease backwards;
+}
+.manage-row:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.manage-row:nth-child(3) {
+  animation-delay: 0.1s;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  .cal-now::before {
+    animation: none !important;
   }
 }
 

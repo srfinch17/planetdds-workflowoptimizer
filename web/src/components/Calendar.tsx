@@ -1,6 +1,7 @@
 import { fmtTime, type Provider, type Appointment, type AvailabilityRule } from '../api'
 import { worksOn, officeClosure } from '../availability'
 import { typeIcon } from '../apptIcons'
+import { todayISO } from '../today'
 
 // The grid window: clinic-wide open/close in 30-minute rows. Per-provider hours
 // inside this window are shaded "closed" so the grid is honest about who's in.
@@ -65,6 +66,13 @@ export function Calendar({
     timeLabels.push(`${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`)
   }
 
+  // Live "now" indicator — only when the grid is showing the real current day and
+  // the clock is inside clinic hours. Header row is 34px; each 30-min row is 26px.
+  const nowDate = new Date()
+  const nowMin = nowDate.getHours() * 60 + nowDate.getMinutes()
+  const showNow = day === todayISO() && nowMin >= OPEN_MIN && nowMin <= CLOSE_MIN
+  const nowTop = 34 + ((nowMin - OPEN_MIN) / STEP) * 26
+
   return (
     <div
       className="calendar"
@@ -73,6 +81,11 @@ export function Calendar({
         gridTemplateRows: `34px repeat(${ROWS}, 26px)`,
       }}
     >
+      {showNow && (
+        <div className="cal-now" style={{ top: `${nowTop}px` }} aria-hidden>
+          <span className="cal-now__label">{fmtTime(nowDate.toISOString())}</span>
+        </div>
+      )}
       <div className="cal-corner" />
       {providers.map((p, idx) => (
         <div key={p.id} className={`cal-head cal-head--${colorAt(idx)}`} style={{ gridColumn: 2 + idx, gridRow: 1 }}>
