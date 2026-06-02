@@ -48,8 +48,14 @@ export class LlmIntentExtractor implements IntentExtractor {
     const preferredProviderId =
       typeof providerName === "string" ? resolveProviderId(providerName, ctx.store) : null;
 
+    // Clamp the appointment type to one the clinic actually offers — the model
+    // can pick a known type or null, never invent one.
+    const knownTypes = new Set(ctx.store.getAppointmentTypes().map((t) => t.type));
+    const rawType: unknown = (raw as Record<string, unknown>)["appointmentType"];
+    const appointmentType = typeof rawType === "string" && knownTypes.has(rawType) ? rawType : null;
+
     const candidate: SchedulingIntent = {
-      appointmentType: (raw as any).appointmentType ?? null,
+      appointmentType,
       urgency: (raw as any).urgency,
       earliestDate: (raw as any).earliestDate ?? null,
       latestDate: (raw as any).latestDate ?? null,
