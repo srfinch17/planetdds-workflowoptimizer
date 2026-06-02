@@ -258,13 +258,13 @@ export function resetSystem(): Promise<{ ok: boolean }> {
 
 export function postBook(
   slot: CandidateSlot,
-  patientId: string,
+  patient: { name: string; phone?: string },
   requestId?: string,
-): Promise<{ appointment: Appointment; appointments: Appointment[] }> {
+): Promise<{ appointment: Appointment; appointments: Appointment[]; confirmationNumber: string }> {
   return fetch('/api/book', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ slot, patientId, requestId }),
+    body: JSON.stringify({ slot, patientName: patient.name, patientPhone: patient.phone, requestId }),
   }).then((r) => jsonOrThrow(r))
 }
 

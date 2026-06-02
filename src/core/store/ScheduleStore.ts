@@ -30,6 +30,9 @@ export interface ScheduleStore {
   /** Remove an availability rule by id. Returns true if one was removed. */
   removeRule(id: string): boolean;
 
+  /** Add a patient record (e.g. a walk-up booking with name + phone). */
+  addPatient(patient: Patient): void;
+
   /** Book a candidate slot for a patient; returns the created appointment. */
   book(slot: CandidateSlot, patientId: string): Appointment;
 

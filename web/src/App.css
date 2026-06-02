@@ -420,16 +420,28 @@
 
 .patient-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   font-size: 13px;
   color: var(--ink-soft);
 }
-.patient-row select {
+.patient-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.patient-row input {
   font: inherit;
-  margin-left: 8px;
   padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
+  color: var(--ink);
+  min-width: 160px;
+}
+.patient-row input:focus {
+  outline: 2px solid var(--brand);
+  border-color: var(--brand);
 }
 
 /* ---------- emergency escalation ---------- */

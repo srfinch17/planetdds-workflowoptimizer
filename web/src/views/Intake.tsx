@@ -10,7 +10,6 @@ import {
   type ScheduleResponse,
   type ScoredSlot,
   type Provider,
-  type Patient,
   type Appointment,
   type AvailabilityRule,
   type ExtractionMode,
@@ -49,11 +48,11 @@ export function Intake() {
   const [result, setResult] = useState<ScheduleResponse | null>(null)
 
   const [providers, setProviders] = useState<Provider[]>([])
-  const [patients, setPatients] = useState<Patient[]>([])
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [rules, setRules] = useState<AvailabilityRule[]>([])
-  const [patientId, setPatientId] = useState('')
-  const [booked, setBooked] = useState<Record<string, boolean>>({})
+  const [patientName, setPatientName] = useState('')
+  const [patientPhone, setPatientPhone] = useState('')
+  const [booked, setBooked] = useState<Record<string, string>>({}) // slotKey → confirmation #
   const [viewDay, setViewDay] = useState<string | null>(null) // day shown in the detail grid
   const [mode, setMode] = useState<ExtractionMode>('tiered') // engine: Auto / LLM only / Rules only
   const [online, setOnline] = useState(true) // is the LLM reachable (key present)?
@@ -62,10 +61,8 @@ export function Intake() {
     Promise.all([getState(), getMetrics()])
       .then(([s, m]) => {
         setProviders(s.providers)
-        setPatients(s.patients)
         setAppointments(s.appointments)
         setRules(s.rules)
-        setPatientId((cur) => cur || s.patients[0]?.id || '')
         setOnline(m.online)
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
@@ -94,11 +91,13 @@ export function Intake() {
     }
   }
 
+  const canBook = patientName.trim().length > 0 && patientPhone.trim().length > 0
+
   async function book(s: ScoredSlot) {
-    if (!patientId) return
+    if (!canBook) return
     try {
-      await postBook(s.slot, patientId, result?.requestId)
-      setBooked((b) => ({ ...b, [slotKey(s)]: true }))
+      const res = await postBook(s.slot, { name: patientName.trim(), phone: patientPhone.trim() }, result?.requestId)
+      setBooked((b) => ({ ...b, [slotKey(s)]: res.confirmationNumber }))
       loadState()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -127,8 +126,8 @@ export function Intake() {
       slot={s}
       providerName={providerName(s.slot.providerId)}
       isPreferred={!!pref && s.slot.providerId === pref}
-      booked={!!booked[slotKey(s)]}
-      canBook={!!patientId}
+      confirmation={booked[slotKey(s)]}
+      canBook={canBook}
       onBook={() => book(s)}
     />
   )
@@ -255,15 +254,22 @@ export function Intake() {
           </section>
 
           <div className="patient-row">
+            <span className="tile-sub">Your details (to confirm the booking):</span>
             <label>
-              👤 Booking as
-              <select value={patientId} onChange={(e) => setPatientId(e.target.value)}>
-                {patients.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              👤
+              <input
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                placeholder="Full name"
+              />
+            </label>
+            <label>
+              📞
+              <input
+                value={patientPhone}
+                onChange={(e) => setPatientPhone(e.target.value)}
+                placeholder="Phone"
+              />
             </label>
           </div>
 
@@ -373,7 +379,7 @@ function SlotCard({
   slot,
   providerName,
   isPreferred,
-  booked,
+  confirmation,
   canBook,
   onBook,
 }: {
@@ -381,10 +387,11 @@ function SlotCard({
   slot: ScoredSlot
   providerName: string
   isPreferred: boolean
-  booked: boolean
+  confirmation?: string
   canBook: boolean
   onBook: () => void
 }) {
+  const booked = !!confirmation
   const matched = slot.factors.filter((f) => f.matched && f.contribution > 0)
   return (
     <article className="card slot-card">
@@ -429,7 +436,7 @@ function SlotCard({
       </ul>
 
       <button className="btn btn--book" onClick={onBook} disabled={booked || !canBook}>
-        {booked ? '✓ Booked' : '📌 Book this slot'}
+        {booked ? `✓ Booked · ${confirmation}` : '📌 Book this slot'}
       </button>
     </article>
   )

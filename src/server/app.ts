@@ -171,10 +171,18 @@ export function createApp(deps: AppDeps): Hono {
   app.post("/api/book", async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const slot = body.slot as CandidateSlot | undefined;
-    const patientId = typeof body.patientId === "string" ? body.patientId : "";
     const correlationId = typeof body.requestId === "string" ? body.requestId : undefined;
+    const patientName = typeof body.patientName === "string" ? body.patientName.trim() : "";
+    const patientPhone = typeof body.patientPhone === "string" ? body.patientPhone.trim() : "";
+
+    // Identify the patient: an existing id, or create one from name + phone.
+    let patientId = typeof body.patientId === "string" ? body.patientId : "";
+    if (!patientId && patientName) {
+      patientId = `pat-${Date.now().toString(36)}`;
+      store.addPatient({ id: patientId, name: patientName, phone: patientPhone || undefined, preferredProviderId: null });
+    }
     if (!slot || !slot.providerId || !slot.start || !slot.end || !patientId) {
-      return c.json({ error: "slot (with start/end) and patientId are required" }, 400);
+      return c.json({ error: "slot (with start/end) and a patient name are required" }, 400);
     }
     // Re-validate at booking time: a recommendation set can contain overlapping
     // options, and time passes between search and click. Never double-book a
@@ -193,19 +201,24 @@ export function createApp(deps: AppDeps): Hono {
       return c.json({ error: "That slot was just taken — please pick another." }, 409);
     }
     const appointment = store.book(slot, patientId);
+    const confirmationNumber = `DDS-${appointment.id.replace(/\D/g, "")}-${Math.random()
+      .toString(36)
+      .slice(2, 6)
+      .toUpperCase()}`;
     eventLog.record(
       "booking",
       {
         outcome: "booked",
         appointmentId: appointment.id,
         providerId: appointment.providerId,
-        operatoryId: appointment.operatoryId,
         start: appointment.start,
         patientId,
+        patientName: patientName || undefined,
+        confirmationNumber,
       },
       correlationId,
     );
-    return c.json({ appointment, appointments: store.getAppointments() });
+    return c.json({ appointment, appointments: store.getAppointments(), confirmationNumber });
   });
 
   // Plain-English rule teaching. The parser translates the sentence into a

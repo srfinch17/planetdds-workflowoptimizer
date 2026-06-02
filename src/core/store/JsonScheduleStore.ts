@@ -77,6 +77,11 @@ export class JsonScheduleStore implements ScheduleStore {
     this.write("rules.json", this.rules);
   }
 
+  addPatient(patient: Patient): void {
+    this.patients.push(patient);
+    this.write("patients.json", this.patients);
+  }
+
   cancelAppointment(id: string): Appointment | undefined {
     const appt = this.appointments.find((a) => a.id === id);
     if (!appt) return undefined;
