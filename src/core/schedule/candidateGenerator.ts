@@ -1,4 +1,11 @@
-import type { Appointment, CandidateSlot, SchedulingIntent, Weekday } from "../types";
+import type {
+  Appointment,
+  AppointmentType,
+  CandidateSlot,
+  Provider,
+  SchedulingIntent,
+  Weekday,
+} from "../types";
 import type { ScheduleStore } from "../store/ScheduleStore";
 import { addMinutes, overlaps, toIso, weekdayOf, withinHours } from "../time";
 import { resolveAvailability, officeClosure } from "./availability";
@@ -26,6 +33,9 @@ export function generateCandidates(
 
   const duration = durationFor(intent.appointmentType, store) ?? DEFAULT_DURATION_MIN;
   const type = intent.appointmentType ?? "appointment";
+  const apptType = intent.appointmentType
+    ? store.getAppointmentTypes().find((t) => t.type === intent.appointmentType)
+    : undefined;
 
   const startDate = intent.earliestDate ?? refDate;
   const endDate = intent.latestDate ?? addDays(startDate, horizon);
@@ -53,6 +63,10 @@ export function generateCandidates(
     const appts = apptsByDate.get(date) ?? [];
 
     for (const provider of store.getProviders()) {
+      // Hard: a provider must be qualified for this appointment type (role +
+      // specialty), so a hygienist never surfaces for an extraction/emergency.
+      if (!providerCanPerform(provider, apptType)) continue;
+
       // Hard: resolve base workdays + add/remove-workday rules (newest wins).
       const av = resolveAvailability(provider, date, rules);
       if (!av.works) continue;
@@ -98,6 +112,19 @@ export function generateCandidates(
   }
 
   return candidates;
+}
+
+/**
+ * Is this provider qualified to perform this appointment type? Eligibility is
+ * data-driven (policy lives in appointmentTypes.json, not here): an unknown type
+ * imposes no restriction, otherwise the provider's role must be allowed and they
+ * must list any required specialty.
+ */
+function providerCanPerform(provider: Provider, apptType: AppointmentType | undefined): boolean {
+  if (!apptType) return true;
+  if (apptType.eligibleRoles && !apptType.eligibleRoles.includes(provider.role)) return false;
+  if (apptType.requiredSpecialty && !provider.specialties.includes(apptType.requiredSpecialty)) return false;
+  return true;
 }
 
 function durationFor(type: string | null, store: ScheduleStore): number | null {

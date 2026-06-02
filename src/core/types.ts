@@ -3,11 +3,12 @@
 
 export type Urgency = "routine" | "soon" | "urgent";
 export type Weekday = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+export type ProviderRole = "dentist" | "hygienist";
 
 export interface Provider {
   id: string;
   name: string;
-  role: "dentist" | "hygienist";
+  role: ProviderRole;
   specialties: string[];
   workdays: Weekday[];
   hours: { start: string; end: string }; // "HH:mm"
@@ -23,6 +24,11 @@ export interface AppointmentType {
   type: string;
   durationMin: number;
   defaultUrgency: Urgency;
+  // HARD eligibility (enforced deterministically by the candidate generator):
+  // which provider roles may perform this type, and an optional specialty the
+  // provider must list. Omitted = any provider qualifies.
+  eligibleRoles?: ProviderRole[];
+  requiredSpecialty?: string;
 }
 
 export interface Patient {

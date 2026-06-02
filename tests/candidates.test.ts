@@ -85,3 +85,50 @@ describe("generateCandidates (hard constraints)", () => {
     expect(got.some((c) => c.providerId === "prov-pana")).toBe(false);
   });
 });
+
+describe("generateCandidates (provider eligibility)", () => {
+  const store = new JsonScheduleStore(SEED_DIR, { persist: false });
+
+  it("never offers a hygienist for an emergency (dentists only)", () => {
+    const got = generateCandidates(
+      intent({ appointmentType: "emergency", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      store,
+    );
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.some((c) => c.providerId === "prov-jones")).toBe(false);
+  });
+
+  it("never offers a hygienist for a filling (dentists only)", () => {
+    const got = generateCandidates(
+      intent({ appointmentType: "filling", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      store,
+    );
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.some((c) => c.providerId === "prov-jones")).toBe(false);
+  });
+
+  it("offers only Dr. Smith for an extraction (requires the extraction specialty)", () => {
+    const got = generateCandidates(
+      intent({ appointmentType: "extraction", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      store,
+    );
+    expect(got.length).toBeGreaterThan(0);
+    expect(got.every((c) => c.providerId === "prov-smith")).toBe(true);
+  });
+
+  it("still offers the hygienist for a cleaning", () => {
+    const got = generateCandidates(
+      intent({ appointmentType: "cleaning", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      store,
+    );
+    expect(got.some((c) => c.providerId === "prov-jones")).toBe(true);
+  });
+
+  it("applies no eligibility filter when the appointment type is unknown", () => {
+    const got = generateCandidates(
+      intent({ appointmentType: null, earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      store,
+    );
+    expect(got.some((c) => c.providerId === "prov-jones")).toBe(true);
+  });
+});

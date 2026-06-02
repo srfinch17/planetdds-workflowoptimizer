@@ -143,20 +143,20 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   the candidate generator indexes appointments by day to stay fast against a full year.
 
 ## Current status
-**Feature-complete.** 100 tests passing, `npm run typecheck` clean, web build clean.
+**Feature-complete.** 105 tests passing, `npm run typecheck` clean, web build clean.
 Implemented: CLI core; Zod validation; tiered/offline intent + a per-request engine-mode
 switch (agentic / mixed / rules); Hono backend; React UI (three tabs — intake + month +
 day calendars + admin + metrics — with theming and custom dropdowns); provider-preference
 grouping; booking with patient name/phone + confirmation numbers; cost/efficiency metrics;
 plain-English rule teaching with add/remove workdays + office-wide closures + a reschedule
 queue + view/delete/reset; dental-triage Agent Skill; emergency escalation with a staff
-callback queue; a year of mock scheduling data with type-driven durations; and an
+callback queue; data-driven provider eligibility (role + required specialty per
+appointment type, so a hygienist never surfaces for an extraction/emergency);
+a year of mock scheduling data with type-driven durations; and an
 append-only event log (`EventLog` port) surfaced as an observability API (`/api/logs`,
 stats, replay, export, reset) with a Metrics activity panel.
 
 ## Known simplifications (intentional)
-- `candidateGenerator` does not yet filter provider role/specialty vs. appointment
-  type, so a hygienist could surface for an "emergency." Easy future hard-constraint.
 - The `/api/logs/replay` metric-restore assumes a single user (no request firing
   concurrently with a replay) — fine in practice, not hardened for concurrency.
 
