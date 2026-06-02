@@ -50,9 +50,10 @@ export function RuleTeacher({ onApplied }: { onApplied: () => void }) {
   return (
     <section className="card rule-teacher">
       <span className="field-label">🧩 Teach a scheduling rule (plain English)</span>
-      <div className="rule-row">
-        <input
+      <div className="teach-row">
+        <textarea
           className="rule-input"
+          rows={2}
           value={sentence}
           onChange={(e) => setSentence(e.target.value)}
           placeholder='e.g. "Dr. Smith never works Fridays"'
