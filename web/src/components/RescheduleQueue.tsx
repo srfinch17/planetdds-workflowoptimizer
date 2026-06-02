@@ -16,7 +16,14 @@ export function RescheduleQueue({
   patients: Patient[]
 }) {
   const provName = (id: string) => providers.find((p) => p.id === id)?.name ?? id
-  const patName = (id: string) => patients.find((p) => p.id === id)?.name ?? id
+  // Named patient → their name; otherwise an anonymized record label (the bulk
+  // calendar belongs to unnamed filler patients) — never a raw "pat-anon-…" id.
+  const patName = (id: string) => {
+    const named = patients.find((p) => p.id === id)
+    if (named) return named.name
+    const n = id.match(/(\d+)$/)
+    return n ? `Patient #${n[1]}` : 'Patient'
+  }
 
   return (
     <section className="card callback-queue">
