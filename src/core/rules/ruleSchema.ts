@@ -17,7 +17,7 @@ export type RuleDraft = Omit<AvailabilityRule, "id">;
 export const llmRuleSchema = z
   .object({
     providerName: z.string().min(1),
-    kind: z.enum(["block", "dayoff"]),
+    kind: z.enum(["block", "dayoff", "workday"]),
     recurrence: z.enum(["daily"]).nullish(),
     weekday: z.enum(WEEKDAYS).nullish(),
     start: z.string().regex(HHMM).nullish(),
@@ -29,6 +29,9 @@ export const llmRuleSchema = z
   })
   .refine((r) => r.kind !== "dayoff" || !!r.weekday, {
     message: "a dayoff rule requires a weekday",
+  })
+  .refine((r) => r.kind !== "workday" || !!r.weekday, {
+    message: "a workday rule requires a weekday",
   });
 
 export type LlmRuleDraft = z.infer<typeof llmRuleSchema>;
@@ -77,6 +80,19 @@ function draftFrom(d: LlmRuleDraft, providerId: string): RuleDraft {
       end: d.end!,
       reason: d.reason?.trim() || "blocked",
     };
+  }
+  if (d.kind === "workday") {
+    const rule: RuleDraft = {
+      providerId,
+      kind: "workday",
+      weekday: d.weekday as Weekday,
+      reason: d.reason?.trim() || `works ${d.weekday}`,
+    };
+    if (d.start && d.end) {
+      rule.start = d.start;
+      rule.end = d.end;
+    }
+    return rule;
   }
   return {
     providerId,

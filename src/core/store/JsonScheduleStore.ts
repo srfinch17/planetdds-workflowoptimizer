@@ -20,17 +20,22 @@ import type { ScheduleStore } from "./ScheduleStore";
  * data so the real seeds are never touched.
  */
 export class JsonScheduleStore implements ScheduleStore {
-  private providers: Provider[];
-  private operatories: Operatory[];
-  private patients: Patient[];
-  private appointmentTypes: AppointmentType[];
-  private appointments: Appointment[];
-  private rules: AvailabilityRule[];
+  private providers!: Provider[];
+  private operatories!: Operatory[];
+  private patients!: Patient[];
+  private appointmentTypes!: AppointmentType[];
+  private appointments!: Appointment[];
+  private rules!: AvailabilityRule[];
 
   constructor(
     private readonly dataDir: string,
     private readonly opts: { persist?: boolean } = {},
   ) {
+    this.reload();
+  }
+
+  /** (Re)load all data from the seed JSON — resets the in-memory store to defaults. */
+  reload(): void {
     this.providers = this.read("providers.json");
     this.operatories = this.read("operatories.json");
     this.patients = this.read("patients.json");

@@ -3,6 +3,7 @@ import {
   getState,
   getMetrics,
   getCallbacks,
+  resetSystem,
   type StateResponse,
   type MetricsResponse,
   type CallbackRecord,
@@ -63,6 +64,16 @@ export function Admin() {
         </label>
         <button className="btn" onClick={reload} disabled={loading}>
           {loading ? 'Refreshing…' : 'Refresh'}
+        </button>
+        <button
+          className="btn btn--danger"
+          onClick={async () => {
+            if (!window.confirm('Reset everything to the default test data? Drops all runtime bookings, rules, logs, and callbacks.')) return
+            await resetSystem()
+            reload()
+          }}
+        >
+          ↺ Reset to default
         </button>
         <div className="calendar-legend">
           <span>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import type { Appointment, Provider, AvailabilityRule, Weekday } from '../api'
+import type { Appointment, Provider, AvailabilityRule } from '../api'
+import { worksOn } from '../availability'
 
-const WEEKDAYS: Weekday[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as unknown as Weekday[]
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -12,9 +12,6 @@ const PALETTE = ['a', 'b', 'c', 'a', 'b', 'c']
 
 function ym(date: string): string {
   return date.slice(0, 7)
-}
-function weekdayOf(date: string): Weekday {
-  return WEEKDAYS[new Date(`${date}T12:00:00`).getDay()]
 }
 function pad(n: number): string {
   return String(n).padStart(2, '0')
@@ -57,9 +54,12 @@ export function MonthCalendar({
   today,
   recommendedDays,
 }: MonthCalendarProps) {
-  const [month, setMonth] = useState(
-    () => initialMonth ?? selectedDate?.slice(0, 7) ?? today?.slice(0, 7) ?? new Date().toISOString().slice(0, 7),
-  )
+  const [month, setMonth] = useState(() => {
+    let m = initialMonth ?? selectedDate?.slice(0, 7) ?? today?.slice(0, 7) ?? new Date().toISOString().slice(0, 7)
+    if (minMonth && m < minMonth) m = minMonth // never open in the past
+    if (maxMonth && m > maxMonth) m = maxMonth
+    return m
+  })
 
   const colorOf = (providerId: string) => {
     const idx = providers.findIndex((p) => p.id === providerId)
@@ -80,14 +80,7 @@ export function MonthCalendar({
     return map
   }, [appointments, month])
 
-  const worksThatDay = (date: string): boolean => {
-    const wd = weekdayOf(date)
-    return providers.some(
-      (p) =>
-        p.workdays.includes(wd) &&
-        !rules.some((r) => r.providerId === p.id && r.kind === 'dayoff' && r.weekday === wd),
-    )
-  }
+  const worksThatDay = (date: string): boolean => providers.some((p) => worksOn(p, date, rules).works)
 
   const [yy, mm] = month.split('-').map(Number)
   const first = new Date(yy, mm - 1, 1)

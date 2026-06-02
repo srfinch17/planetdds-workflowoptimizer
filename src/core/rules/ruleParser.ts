@@ -34,6 +34,22 @@ export function regexParseRule(sentence: string, store: ScheduleStore): RuleDraf
     }
   }
 
+  // --- workday add: "now works Saturdays", "works on Saturdays", optional hours ---
+  if (/\b(works?|working|is available|available)\b/.test(text)) {
+    const weekday = findWeekday(text);
+    if (weekday) {
+      const span = text.match(
+        /\b(?:from\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:to|until|till|-|–|through)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/,
+      );
+      const rule: RuleDraft = { providerId, kind: "workday", weekday, reason: `works ${weekday}` };
+      if (span) {
+        rule.start = toHHmm(span[1]!, span[2], span[3]);
+        rule.end = toHHmm(span[4]!, span[5], span[6]);
+      }
+      return rule;
+    }
+  }
+
   // --- time block: "lunch from 11 to 12:30", "blocked 2 to 3 every day" ---
   const span = text.match(
     /\b(?:from\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:to|until|till|-|–|through)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/,
@@ -149,7 +165,8 @@ function buildSystemPrompt(store: ScheduleStore): string {
     '  "weekday": "Mon|Tue|Wed|Thu|Fri|Sat|Sun" | null, "start": "HH:mm" | null,',
     '  "end": "HH:mm" | null, "reason": string }',
     'Use "block" for a recurring time the provider is unavailable (lunch, meeting); include start+end (24h).',
-    'Use "dayoff" for a whole weekday off; include weekday.',
+    'Use "dayoff" for a whole weekday the provider does NOT work; include weekday.',
+    'Use "workday" for a weekday the provider DOES now work (adding a day); include weekday, and start+end only if custom hours are given.',
     "Providers:",
     providers,
   ].join("\n");

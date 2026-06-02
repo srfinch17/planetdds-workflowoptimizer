@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { postRule, type AvailabilityRule } from '../api'
 
-const EXAMPLES = ['Dr. Jones takes lunch from 12 to 1 every day', 'Dr. Smith never works Wednesdays']
+const EXAMPLES = [
+  'Dr. Pana now works Saturdays',
+  'Dr. Jones takes lunch from 12 to 1 every day',
+  'Dr. Smith never works Wednesdays',
+]
 
 /**
  * Lets an admin teach a scheduling rule in plain English. The sentence is
@@ -20,7 +24,19 @@ export function RuleTeacher({ onApplied }: { onApplied: () => void }) {
     setError(null)
     setApplied(null)
     try {
-      const res = await postRule(sentence.trim())
+      let res = await postRule(sentence.trim())
+      if (!res.ok) {
+        // The new rule contradicts an existing one — confirm an override.
+        if (!window.confirm(res.conflict.message)) {
+          setBusy(false)
+          return
+        }
+        res = await postRule(sentence.trim(), true)
+        if (!res.ok) {
+          setBusy(false)
+          return
+        }
+      }
       setApplied({ rule: res.rule, source: res.source })
       onApplied()
     } catch (e) {

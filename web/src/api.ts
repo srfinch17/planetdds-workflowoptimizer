@@ -140,12 +140,13 @@ export interface Appointment {
 export interface AvailabilityRule {
   id: string
   providerId: string
-  kind: 'block' | 'dayoff'
+  kind: 'block' | 'dayoff' | 'workday'
   recurrence?: 'daily'
   weekday?: Weekday
   start?: string
   end?: string
   reason: string
+  createdAt?: string
 }
 
 export interface StateResponse {
@@ -209,14 +210,27 @@ export function getCallbacks(): Promise<{ callbacks: CallbackRecord[] }> {
   return fetch('/api/callbacks').then((r) => jsonOrThrow<{ callbacks: CallbackRecord[] }>(r))
 }
 
-export function postRule(
-  sentence: string,
-): Promise<{ rule: AvailabilityRule; source: 'rules' | 'llm'; rules: AvailabilityRule[] }> {
-  return fetch('/api/rules', {
+export type RuleConflict = { existingRule: AvailabilityRule; message: string }
+export type PostRuleResult =
+  | { ok: true; rule: AvailabilityRule; source: 'rules' | 'llm'; rules: AvailabilityRule[] }
+  | { ok: false; conflict: RuleConflict }
+
+export async function postRule(sentence: string, override = false): Promise<PostRuleResult> {
+  const res = await fetch('/api/rules', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ sentence }),
-  }).then((r) => jsonOrThrow(r))
+    body: JSON.stringify({ sentence, override }),
+  })
+  if (res.status === 409) {
+    const body = (await res.json()) as { conflict: RuleConflict }
+    return { ok: false, conflict: body.conflict }
+  }
+  const data = await jsonOrThrow<{ rule: AvailabilityRule; source: 'rules' | 'llm'; rules: AvailabilityRule[] }>(res)
+  return { ok: true, ...data }
+}
+
+export function resetSystem(): Promise<{ ok: boolean }> {
+  return fetch('/api/reset', { method: 'POST' }).then((r) => jsonOrThrow<{ ok: boolean }>(r))
 }
 
 export function postBook(

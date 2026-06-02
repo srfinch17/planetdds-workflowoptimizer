@@ -46,12 +46,16 @@ export interface Appointment {
 export interface AvailabilityRule {
   id: string;
   providerId: string;
-  kind: "block" | "dayoff";
+  // dayoff: provider does NOT work this weekday. workday: provider DOES work
+  // this weekday (can add a day not in base hours). block: a recurring time
+  // block on working days (e.g. lunch).
+  kind: "block" | "dayoff" | "workday";
   recurrence?: "daily";
   weekday?: Weekday;
-  start?: string; // "HH:mm" (for kind "block")
-  end?: string; // "HH:mm" (for kind "block")
+  start?: string; // "HH:mm" — block start, or custom working-hours start for a workday
+  end?: string; // "HH:mm" — block end, or custom working-hours end for a workday
   reason: string;
+  createdAt?: string; // ISO; newest rule wins when two rules conflict (missing = oldest)
 }
 
 // The structured output of the Intent Agent.

@@ -1,4 +1,5 @@
-import { fmtTime, type Provider, type Appointment, type AvailabilityRule, type Weekday } from '../api'
+import { fmtTime, type Provider, type Appointment, type AvailabilityRule } from '../api'
+import { worksOn } from '../availability'
 
 // The grid window: clinic-wide open/close in 30-minute rows. Per-provider hours
 // inside this window are shaded "closed" so the grid is honest about who's in.
@@ -7,17 +8,12 @@ const CLOSE_MIN = 17 * 60 // 17:00
 const STEP = 30
 const ROWS = (CLOSE_MIN - OPEN_MIN) / STEP // 18 rows
 
-const WEEKDAYS: Weekday[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as unknown as Weekday[]
-
 function hhmmToMin(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number)
   return h * 60 + m
 }
 function isoToMin(iso: string): number {
   return hhmmToMin(iso.slice(11, 16))
-}
-function weekdayOf(day: string): Weekday {
-  return WEEKDAYS[new Date(`${day}T12:00:00`).getDay()]
 }
 // Grid line for a given minute (clamped into the visible window). Row 1 is the
 // header, so the first time slot starts at line 2.
@@ -52,7 +48,6 @@ export function Calendar({
   bookedKeys,
   onBookSlot,
 }: CalendarProps) {
-  const wd = weekdayOf(day)
   const dayAppts = appointments.filter((a) => a.start.slice(0, 10) === day)
 
   const timeLabels: string[] = []
@@ -91,8 +86,8 @@ export function Calendar({
 
       {providers.map((p, idx) => {
         const col = 2 + idx
-        const dayOff = !p.workdays.includes(wd) || rules.some((r) => r.providerId === p.id && r.kind === 'dayoff' && r.weekday === wd)
-        if (dayOff) {
+        const av = worksOn(p, day, rules)
+        if (!av.works) {
           return (
             <div key={`off-${p.id}`} className="cal-block cal-block--off" style={{ gridColumn: col, gridRow: `2 / ${2 + ROWS}` }}>
               day off
@@ -100,8 +95,8 @@ export function Calendar({
           )
         }
         // Shade the hours this provider isn't in (within the clinic window).
-        const open = hhmmToMin(p.hours.start)
-        const close = hhmmToMin(p.hours.end)
+        const open = hhmmToMin(av.hours.start)
+        const close = hhmmToMin(av.hours.end)
         const shades = []
         if (open > OPEN_MIN) {
           shades.push(

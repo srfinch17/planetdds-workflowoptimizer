@@ -75,7 +75,7 @@ export function Intake() {
     try {
       const res = await postSchedule(request.trim(), refDate || undefined)
       setResult(res)
-      setViewDay(res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? refDate)
+      setViewDay(res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? res.intent.earliestDate ?? TODAY)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -103,7 +103,7 @@ export function Intake() {
   const mine = pref ? slots.filter((s) => s.slot.providerId === pref) : []
   const others = pref ? slots.filter((s) => s.slot.providerId !== pref) : slots
 
-  const calendarDay = slots[0]?.slot.start.slice(0, 10) ?? refDate
+  const calendarDay = slots[0]?.slot.start.slice(0, 10) ?? result?.intent.earliestDate ?? TODAY
   const dayShown = viewDay ?? calendarDay
   const highlights = new Set(slots.map(slotKey))
   const recommendedDays = new Set(slots.map((s) => s.slot.start.slice(0, 10)))

@@ -1,6 +1,7 @@
 import type { Appointment, CandidateSlot, SchedulingIntent, Weekday } from "../types";
 import type { ScheduleStore } from "../store/ScheduleStore";
 import { addMinutes, overlaps, toIso, weekdayOf, withinHours } from "../time";
+import { resolveAvailability } from "./availability";
 
 const SLOT_STEP_MIN = 15; // granularity of candidate start times
 const DEFAULT_DURATION_MIN = 30;
@@ -50,12 +51,9 @@ export function generateCandidates(
     const appts = apptsByDate.get(date) ?? [];
 
     for (const provider of store.getProviders()) {
-      // Hard: provider must work this weekday.
-      if (!provider.workdays.includes(wd)) continue;
-      // Hard: a day-off rule removes the provider entirely for this weekday.
-      if (rules.some((r) => r.providerId === provider.id && r.kind === "dayoff" && r.weekday === wd)) {
-        continue;
-      }
+      // Hard: resolve base workdays + add/remove-workday rules (newest wins).
+      const av = resolveAvailability(provider, date, rules);
+      if (!av.works) continue;
 
       // Block rules (e.g., lunch) for this provider, materialized on this date.
       const blocks = rules
@@ -63,8 +61,8 @@ export function generateCandidates(
         .map((r) => ({ start: `${date}T${r.start}:00`, end: `${date}T${r.end}:00` }));
 
       for (const operatory of store.getOperatories()) {
-        let cursor = `${date}T${provider.hours.start}:00`;
-        const dayEnd = `${date}T${provider.hours.end}:00`;
+        let cursor = `${date}T${av.hours.start}:00`;
+        const dayEnd = `${date}T${av.hours.end}:00`;
 
         while (new Date(cursor).getTime() <= new Date(dayEnd).getTime()) {
           const slotStart = cursor;
@@ -74,7 +72,7 @@ export function generateCandidates(
           if (new Date(slotEnd).getTime() > new Date(dayEnd).getTime()) break;
 
           if (
-            withinHours(slotStart, slotEnd, provider.hours.start, provider.hours.end) &&
+            withinHours(slotStart, slotEnd, av.hours.start, av.hours.end) &&
             !blocks.some((b) => overlaps(slotStart, slotEnd, b.start, b.end)) &&
             !appts.some(
               (a) =>

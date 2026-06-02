@@ -210,10 +210,45 @@ export function createApp(deps: AppDeps): Hono {
       eventLog.record("rule_added", { outcome: "rejected", sentence, error: parsed.error });
       return c.json({ error: parsed.error }, 422);
     }
-    const rule: AvailabilityRule = { ...parsed.rule, id: nextRuleId(store.getRules()) };
+    const rule: AvailabilityRule = {
+      ...parsed.rule,
+      id: nextRuleId(store.getRules()),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Contradiction check: an existing workday/dayoff rule for the same provider
+    // + weekday of the OPPOSITE kind. Newest-wins would silently override it, so
+    // (unless override:true) we ask the admin to confirm first.
+    if ((rule.kind === "workday" || rule.kind === "dayoff") && body.override !== true) {
+      const opposite = rule.kind === "workday" ? "dayoff" : "workday";
+      const existing = store
+        .getRules()
+        .find((r) => r.providerId === rule.providerId && r.weekday === rule.weekday && r.kind === opposite);
+      if (existing) {
+        return c.json(
+          {
+            conflict: {
+              existingRule: existing,
+              message: `This contradicts an existing rule ("${existing.reason}"). Override it?`,
+            },
+          },
+          409,
+        );
+      }
+    }
+
     store.addRule(rule);
     eventLog.record("rule_added", { outcome: "added", sentence, rule, source: parsed.source });
     return c.json({ rule, source: parsed.source, rules: store.getRules() });
+  });
+
+  // Reset the whole system to its seed defaults — drops runtime bookings + rules,
+  // clears the log and the callback queue. A testing convenience.
+  app.post("/api/reset", (c) => {
+    store.reload();
+    eventLog.reset();
+    callbacks.length = 0;
+    return c.json({ ok: true });
   });
 
   // --- Observability: the event log surfaced as an API ---
