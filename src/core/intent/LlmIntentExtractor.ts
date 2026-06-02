@@ -104,6 +104,10 @@ function buildSystemPrompt(store: ScheduleStore): string {
     "- preferredProviderName: the provider's name exactly as listed above, or null",
     "",
     "Resolve all relative dates against the reference date you are given.",
+    "Interpret a vague part of a month as a date RANGE (earliestDate..latestDate),",
+    'consistently: "early" = the 1st-10th, "mid" = the 11th-20th, "late" = the',
+    '21st-end of the month. e.g. with reference year 2026, "late July" =>',
+    'earliestDate "2026-07-21", latestDate "2026-07-31".',
   ].join("\n");
 }
 
