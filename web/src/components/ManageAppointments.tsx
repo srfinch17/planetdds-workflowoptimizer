@@ -128,7 +128,7 @@ export function ManageAppointments({
             <li key={a.id} className={`manage-row${outcome ? ' manage-row--done' : ''}`}>
               <span className="manage-row__info">
                 {typeIcon(a.type)} <strong>{a.type}</strong> with {a.providerName} · {fmtWeekday(a.start)}{' '}
-                {fmtDate(a.start)} at {fmtTime(a.start)}
+                {fmtDate(a.start)} {yearOf(a.start)} at {fmtTime(a.start)}
               </span>
               {outcome ? (
                 <span className="manage-row__status">
@@ -180,7 +180,7 @@ export function ManageAppointments({
                 onClick={() => doReschedule(reschedulingId, s)}
               >
                 <span className="open-slot__time">
-                  {fmtWeekday(s.start)} {fmtDate(s.start)} · {fmtTime(s.start)}
+                  {fmtWeekday(s.start)} {fmtDate(s.start)} {yearOf(s.start)} · {fmtTime(s.start)}
                 </span>
                 <span className="open-slot__cta">move&nbsp;→</span>
               </button>
@@ -198,4 +198,10 @@ function addDays(date: string, n: number): string {
   const d = new Date(`${date}T00:00:00`)
   d.setDate(d.getDate() + n)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Appointments can be months out, so always show the year — "Feb 15" alone is
+// ambiguous across years.
+function yearOf(iso: string): string {
+  return String(new Date(iso).getFullYear())
 }
