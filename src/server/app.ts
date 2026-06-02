@@ -7,6 +7,7 @@ import type { CandidateSlot, AvailabilityRule, EscalationLevel, SchedulingIntent
 import { generateCandidates } from "../core/schedule/candidateGenerator";
 import type { LlmClient } from "../core/llm/anthropicClient";
 import { parseRuleSentence } from "../core/rules/ruleParser";
+import { identifyPatient } from "../core/patients/lookup";
 import { overlaps } from "../core/time";
 import type { EventLog, EventType } from "../core/log/eventLog";
 import { LatencyMeter } from "./metrics";
@@ -235,14 +236,30 @@ export function createApp(deps: AppDeps): Hono {
     const patientName = typeof body.patientName === "string" ? body.patientName.trim() : "";
     const patientPhone = typeof body.patientPhone === "string" ? body.patientPhone.trim() : "";
 
-    // Identify the patient: an existing id, or create one from name + phone.
-    let patientId = typeof body.patientId === "string" ? body.patientId : "";
-    if (!patientId && patientName) {
-      patientId = `pat-${Date.now().toString(36)}`;
-      store.addPatient({ id: patientId, name: patientName, phone: patientPhone || undefined, preferredProviderId: null });
-    }
-    if (!slot || !slot.providerId || !slot.start || !slot.end || !patientId) {
+    // Validate the slot BEFORE touching patient records — a malformed request
+    // must never leave an orphan patient behind.
+    if (!slot || !slot.providerId || !slot.start || !slot.end) {
       return c.json({ error: "slot (with start/end) and a patient name are required" }, 400);
+    }
+
+    // Resolve the patient: an explicit id wins; otherwise REUSE an existing
+    // patient matching the stated name/phone before minting a new record.
+    // Always creating a new one forks the same person into duplicate rows — and
+    // a later "cancel my appointment" (which identifies by UNIQUE name) would
+    // then go ambiguous and fail. Booking the same person twice must not split
+    // them. (Same identifyPatient the cancel/reschedule path uses.)
+    let patientId = typeof body.patientId === "string" ? body.patientId : "";
+    if (!patientId) {
+      if (!patientName) {
+        return c.json({ error: "slot (with start/end) and a patient name are required" }, 400);
+      }
+      const existing = identifyPatient(patientName, patientPhone || null, store);
+      if (existing) {
+        patientId = existing.id;
+      } else {
+        patientId = `pat-${Date.now().toString(36)}`;
+        store.addPatient({ id: patientId, name: patientName, phone: patientPhone || undefined, preferredProviderId: null });
+      }
     }
     // Re-validate at booking time: a recommendation set can contain overlapping
     // options, and time passes between search and click. Never double-book a

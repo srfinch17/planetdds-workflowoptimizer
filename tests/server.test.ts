@@ -313,6 +313,45 @@ describe("Hono backend API", () => {
     expect(body.appointments.length).toBe(before.appointments.length + 1);
   });
 
+  it("POST /api/book reuses an existing patient by name instead of forking a duplicate", async () => {
+    // Regression: booking under a name that already exists (no patientId, as the
+    // Intake form sends) used to mint a SECOND "Jane Doe". A later cancel-by-name
+    // then matched two patients, went ambiguous, and reported "not found".
+    const sched = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "Can I come in next Thursday after 3?", refDate: "2026-05-31" }),
+    });
+    const { recommendation } = (await sched.json()) as any;
+    const slot = recommendation.slots[0].slot;
+
+    const before = (await (await app.request("/api/state")).json()) as any;
+    const janeBefore = before.patients.filter((p: any) => p.name === "Jane Doe");
+    expect(janeBefore.length).toBe(1); // seed has exactly one Jane Doe
+
+    const res = await app.request("/api/book", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ slot, patientName: "Jane Doe", patientPhone: "949-555-7777" }),
+    });
+    expect(res.status).toBe(200);
+    const booked = (await res.json()) as any;
+    // Reused the seed patient's id rather than creating a new one.
+    expect(booked.appointment.patientId).toBe(janeBefore[0].id);
+
+    const after = (await (await app.request("/api/state")).json()) as any;
+    expect(after.patients.filter((p: any) => p.name === "Jane Doe").length).toBe(1); // still one
+
+    // The original symptom: cancel-by-name must still resolve her.
+    const cancel = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "this is Jane Doe, cancel my appointment" }),
+    });
+    const cancelBody = (await cancel.json()) as any;
+    expect(cancelBody.patientMatch.found).toBe(true);
+  });
+
   it("logs a schedule_request and exposes it via GET /api/logs (+ stats)", async () => {
     const sched = await app.request("/api/schedule", {
       method: "POST",
