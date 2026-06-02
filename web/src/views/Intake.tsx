@@ -15,6 +15,7 @@ import {
 } from '../api'
 import { Calendar } from '../components/Calendar'
 import { MonthCalendar } from '../components/MonthCalendar'
+import { todayISO, thisMonth, monthsAhead } from '../today'
 
 // One-click example requests. The Dr. Smith one shows the "your dentist vs.
 // alternatives" grouping; the last one trips the emergency escalation.
@@ -26,17 +27,15 @@ const EXAMPLES = [
   'my tooth is killing me, can I come in this evening?',
 ]
 
-// The seed calendar has data around early June 2026, and chrono reads "next
-// Thursday" relative to this date. Pinning it keeps results reproducible.
-const DEFAULT_REF_DATE = '2026-05-31'
-const TODAY = '2026-06-01'
-const MIN_MONTH = '2026-06'
-const MAX_MONTH = '2027-06'
+// "Today" is always the real system date — relative phrases ("next Thursday")
+// are anchored to it, and the calendar can't open in the past.
+const TODAY = todayISO()
+const MIN_MONTH = thisMonth()
+const MAX_MONTH = monthsAhead(12)
 
 // `mode` is the engine setting from the header indicator (agentic/mixed/rules).
 export function Intake({ mode }: { mode: ExtractionMode }) {
   const [request, setRequest] = useState(EXAMPLES[0])
-  const [refDate, setRefDate] = useState(DEFAULT_REF_DATE)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ScheduleResponse | null>(null)
@@ -72,7 +71,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     setResult(null)
     setBooked({})
     try {
-      const res = await postSchedule(request.trim(), refDate || undefined, mode)
+      const res = await postSchedule(request.trim(), TODAY, mode)
       setResult(res)
       setViewDay(res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? res.intent.earliestDate ?? TODAY)
     } catch (e) {
@@ -147,10 +146,6 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
         </div>
 
         <div className="request-actions">
-          <label className="ref-date">
-            Reference date
-            <input type="date" value={refDate} onChange={(e) => setRefDate(e.target.value)} />
-          </label>
           <button
             className="btn btn--primary"
             onClick={findAppointments}

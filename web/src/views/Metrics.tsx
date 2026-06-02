@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { getState, getMetrics, type StateResponse, type MetricsResponse } from '../api'
 import { Dashboard } from '../components/Dashboard'
 import { LogPanel } from '../components/LogPanel'
+import { todayISO } from '../today'
 
-// Utilization is shown for a representative seeded day.
-const UTIL_DAY = '2026-06-04'
+// Utilization is shown for the real current day.
+const UTIL_DAY = todayISO()
 
 /**
  * Metrics Dashboard: the cost/efficiency story + the activity/audit log. Read-only

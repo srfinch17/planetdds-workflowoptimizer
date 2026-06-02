@@ -12,13 +12,14 @@ import { RuleTeacher } from '../components/RuleTeacher'
 import { RulesList } from '../components/RulesList'
 import { CallbackQueue } from '../components/CallbackQueue'
 import { RescheduleQueue } from '../components/RescheduleQueue'
+import { todayISO, thisMonth, monthsAhead } from '../today'
 
-// The seed calendar has its appointments on this Thursday — a sensible default
-// so the grid opens with something to look at.
-const DEFAULT_DAY = '2026-06-04'
-const TODAY = '2026-06-01'
-const MIN_MONTH = '2026-06'
-const MAX_MONTH = '2027-06'
+// The calendar opens on the real today; month navigation runs from this month
+// to a year out, so you can never land in the past.
+const TODAY = todayISO()
+const DEFAULT_DAY = TODAY
+const MIN_MONTH = thisMonth()
+const MAX_MONTH = monthsAhead(12)
 
 /**
  * Admin Dashboard. For Floor 3 this is the live calendar (the operational

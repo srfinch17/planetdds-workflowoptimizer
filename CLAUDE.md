@@ -71,7 +71,7 @@ TypeScript, Node, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku),
 ## How to run
 ```bash
 npm install
-npm run cli -- "Can I come in next Thursday after 3?" --ref=2026-05-31
+npm run cli -- "Can I come in next Thursday after 3?"   # anchors to today; add --ref=YYYY-MM-DD to pin
 npm run scenarios     # four example runs (happy / ambiguous / urgent / emergency)
 npm test              # full suite
 npm run typecheck     # tsc --noEmit
@@ -79,9 +79,13 @@ npm run typecheck     # tsc --noEmit
 Web (two terminals): `npm run server` (backend :3000) + `cd web && npm run dev`
 (frontend :5173). Open http://localhost:5173 — Patient Intake + Admin Dashboard.
 
-**Reference-date gotcha:** `--ref=YYYY-MM-DD` pins "today". Use `2026-05-31` so
-"next Thursday" resolves to 6/4, where the seed calendar has data. (chrono reads
-"next Thursday" as *next week's* Thursday.)
+**"Today" is the real system date.** The web app and the engine both anchor to
+the actual current date (see `web/src/today.ts`); seed appointments that have
+slipped into the past just show as past, while future availability still comes
+from each provider's working rules. The CLI's `--ref=YYYY-MM-DD` only pins
+"today" for reproducing seed-anchored demos (e.g. `--ref=2026-05-31` so "next
+Thursday" lands on 6/4 where the seed calendar is rich) — `npm run scenarios`
+uses it for that reason. Without `--ref`, the CLI uses today too.
 
 **Online (optional):** put `ANTHROPIC_API_KEY=...` in `.env`. With a key,
 ambiguous requests escalate to Haiku; without one, everything runs deterministically
