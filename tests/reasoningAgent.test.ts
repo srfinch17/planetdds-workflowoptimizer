@@ -72,6 +72,33 @@ describe("ScheduleReasoningAgent.recommend", () => {
     expect(rec.slots.length).toBeGreaterThan(0);
   });
 
+  it("never returns empty: when the requested window is fully booked, it widens to the nearest opening", () => {
+    // An extraction (90 min, X-ray room, Dr. Smith only) has no opening in the
+    // dense week of 2026-06-11 — but the patient should still get the soonest
+    // real extraction slot, flagged best-effort, not an empty result.
+    const rec = agent.recommend(
+      intent({
+        appointmentType: "extraction",
+        earliestDate: "2026-06-11",
+        latestDate: "2026-06-11",
+        daysOfWeek: ["Thu"],
+      }),
+      store,
+      3,
+      { refDate: "2026-06-02" },
+    );
+    expect(rec.slots.length).toBeGreaterThan(0);
+    expect(rec.bestEffort).toBe(true);
+    // Whatever it offers is still a valid extraction: Dr. Smith, in an X-ray room.
+    const xrayOps = new Set(
+      store.getOperatories().filter((o) => o.equipment.includes("xray")).map((o) => o.id),
+    );
+    for (const s of rec.slots) {
+      expect(s.slot.providerId).toBe("prov-smith");
+      expect(xrayOps.has(s.slot.operatoryId)).toBe(true);
+    }
+  });
+
   it("when a provider is requested, leads with their slots then includes alternatives", () => {
     const rec = agent.recommend(intent({ preferredProviderId: "prov-smith" }), store, 3, opts);
     expect(rec.preferredProviderId).toBe("prov-smith");

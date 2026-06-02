@@ -22,7 +22,21 @@ export class ScheduleReasoningAgent {
     opts: GenerateOptions = {},
   ): Recommendation {
     const refDate = opts.refDate;
-    const candidates = generateCandidates(intent, store, opts);
+    let candidates = generateCandidates(intent, store, opts);
+
+    // Never answer "nothing." If the requested window is fully booked for this
+    // kind of appointment (common once hard constraints like X-ray-only rooms
+    // bite on a busy week), widen the search to the soonest opening anywhere in
+    // a longer horizon. Scoring still uses the ORIGINAL intent, so the requested
+    // day/time keeps ranking the nearest fit highest; the answer is flagged
+    // best-effort below.
+    let widened = false;
+    if (candidates.length === 0) {
+      widened = true;
+      const relaxed: SchedulingIntent = { ...intent, earliestDate: null, latestDate: null, daysOfWeek: [] };
+      candidates = generateCandidates(relaxed, store, { ...opts, horizonDays: 60 });
+    }
+
     const scored = candidates.map((slot) => scoreSlot(slot, intent, store, { refDate }));
 
     // Collapse duplicates: the same provider+time shows up once per operatory.
@@ -56,10 +70,11 @@ export class ScheduleReasoningAgent {
     // room to two providers at the same time).
     assignDistinctOperatories(slots, store);
 
-    // Honesty flag: if the best slot couldn't satisfy the requested time window
-    // (or there were no slots at all), this is a best-effort answer, not a match.
+    // Honesty flag: a widened search (we couldn't honor the requested dates), a
+    // top slot that misses the requested time window, or no slots at all are all
+    // best-effort answers, not exact matches.
     const top = slots[0];
-    const bestEffort = top ? !timeWindowSatisfied(top) : true;
+    const bestEffort = widened || (top ? !timeWindowSatisfied(top) : true);
 
     return { slots, bestEffort, preferredProviderId: pref };
   }
@@ -79,12 +94,13 @@ function assignDistinctOperatories(slots: ScoredSlot[], store: ScheduleStore): v
 
   for (const s of slots) {
     const { start, end, type } = s.slot;
-    const needsXray = type === "extraction" || type === "emergency";
+    // Same data-driven equipment policy the candidate generator enforces.
+    const required = store.getAppointmentTypes().find((t) => t.type === type)?.requiredEquipment ?? [];
 
     const isFree = (opId: string): boolean => {
       const op = operatories.find((o) => o.id === opId);
       if (!op) return false;
-      if (needsXray && !op.equipment.includes("xray")) return false;
+      if (!required.every((e) => op.equipment.includes(e))) return false;
       const apptClash = appts.some((a) => a.operatoryId === opId && overlaps(start, end, a.start, a.end));
       const peerClash = claimed.some((c) => c.operatoryId === opId && overlaps(start, end, c.start, c.end));
       return !apptClash && !peerClash;
