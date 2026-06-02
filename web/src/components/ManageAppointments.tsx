@@ -36,8 +36,9 @@ export function ManageAppointments({
 }) {
   const [error, setError] = useState<string | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
-  const [doneId, setDoneId] = useState<string | null>(null)
-  const [confirmation, setConfirmation] = useState<string | null>(null)
+  // Per-appointment outcome, so cancelling/rescheduling several in a row each
+  // keep their own status (a single value would let later actions wipe earlier ones).
+  const [done, setDone] = useState<Record<string, { kind: 'cancelled' | 'rescheduled'; confirmation?: string }>>({})
   const [reschedulingId, setReschedulingId] = useState<string | null>(null)
   const [newSlots, setNewSlots] = useState<CandidateSlot[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
@@ -66,7 +67,7 @@ export function ManageAppointments({
     setError(null)
     try {
       await postCancel(id)
-      setDoneId(id)
+      setDone((m) => ({ ...m, [id]: { kind: 'cancelled' } }))
       setConfirmingId(null)
       onChanged()
     } catch (e) {
@@ -80,8 +81,10 @@ export function ManageAppointments({
     setLoadingSlots(true)
     setError(null)
     try {
-      const from = intent.earliestDate ?? today
-      const to = intent.latestDate ?? addDays(today, 60)
+      // Never search before today — a reschedule can only move an appointment
+      // forward, even if the model returned a stale earliest date.
+      const from = intent.earliestDate && intent.earliestDate > today ? intent.earliestDate : today
+      const to = intent.latestDate && intent.latestDate > from ? intent.latestDate : addDays(today, 60)
       const { slotsByDay } = await getAvailability({ from, to, type: appt.type, days: intent.daysOfWeek })
       const flat = Object.keys(slotsByDay)
         .sort()
@@ -100,8 +103,7 @@ export function ManageAppointments({
     setError(null)
     try {
       const r = await postReschedule(oldId, slot)
-      setConfirmation(r.confirmationNumber)
-      setDoneId(oldId)
+      setDone((m) => ({ ...m, [oldId]: { kind: 'rescheduled', confirmation: r.confirmationNumber } }))
       setReschedulingId(null)
       onChanged()
     } catch (e) {
@@ -121,16 +123,18 @@ export function ManageAppointments({
 
       <ul className="manage-list">
         {appointments.map((a) => {
-          const done = doneId === a.id
+          const outcome = done[a.id]
           return (
-            <li key={a.id} className={`manage-row${done ? ' manage-row--done' : ''}`}>
+            <li key={a.id} className={`manage-row${outcome ? ' manage-row--done' : ''}`}>
               <span className="manage-row__info">
                 {typeIcon(a.type)} <strong>{a.type}</strong> with {a.providerName} · {fmtWeekday(a.start)}{' '}
                 {fmtDate(a.start)} at {fmtTime(a.start)}
               </span>
-              {done ? (
+              {outcome ? (
                 <span className="manage-row__status">
-                  {action === 'cancel' ? '✓ Cancelled' : `✓ Rescheduled${confirmation ? ' · ' + confirmation : ''}`}
+                  {outcome.kind === 'cancelled'
+                    ? '✓ Cancelled'
+                    : `✓ Rescheduled${outcome.confirmation ? ' · ' + outcome.confirmation : ''}`}
                 </span>
               ) : action === 'cancel' ? (
                 confirmingId === a.id ? (
@@ -148,8 +152,12 @@ export function ManageAppointments({
                   </button>
                 )
               ) : (
-                <button className="btn btn--primary" onClick={() => startReschedule(a)} disabled={!!doneId}>
-                  Reschedule
+                <button
+                  className="btn btn--primary"
+                  onClick={() => startReschedule(a)}
+                  disabled={reschedulingId === a.id}
+                >
+                  {reschedulingId === a.id ? 'Pick a new time below' : 'Reschedule'}
                 </button>
               )}
             </li>
@@ -157,24 +165,24 @@ export function ManageAppointments({
         })}
       </ul>
 
-      {action === 'reschedule' && reschedulingId && !doneId && (
+      {action === 'reschedule' && reschedulingId && !done[reschedulingId] && (
         <div className="reschedule-slots">
           <span className="field-label">🕐 New times{loadingSlots ? ' — finding…' : ''}</span>
           {!loadingSlots && newSlots.length === 0 && (
             <p className="open-times__empty">No open times in that window — try a different request.</p>
           )}
-          <div className="open-prov__times">
+          <div className="reschedule-slots__times">
             {newSlots.map((s) => (
               <button
                 key={`${s.providerId}@${s.start}`}
-                className="open-slot"
+                className="open-slot reschedule-slot"
                 title="Move the appointment to this time"
                 onClick={() => doReschedule(reschedulingId, s)}
               >
                 <span className="open-slot__time">
-                  {fmtWeekday(s.start)} {fmtDate(s.start)} {fmtTime(s.start)}
+                  {fmtWeekday(s.start)} {fmtDate(s.start)} · {fmtTime(s.start)}
                 </span>
-                <span className="open-slot__cta">move</span>
+                <span className="open-slot__cta">move&nbsp;→</span>
               </button>
             ))}
           </div>

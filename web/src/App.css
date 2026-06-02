@@ -217,6 +217,15 @@
   gap: 8px;
   padding-top: 4px;
 }
+.reschedule-slots__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reschedule-slot {
+  justify-content: space-between;
+  gap: 14px;
+}
 
 .banner {
   background: var(--surface);
