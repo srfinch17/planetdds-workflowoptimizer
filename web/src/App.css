@@ -147,18 +147,25 @@
   border-color: var(--brand);
   color: var(--brand);
 }
-.btn--danger {
-  background: var(--bad, #c0271a);
-  border-color: var(--bad, #c0271a);
+/* Solid, emphatic destructive button (the "Confirm cancel" action). Note:
+   `.btn--danger` itself is an OUTLINE style defined later — don't add a second
+   solid `.btn--danger` here or the two collide into red-on-red. */
+.btn--danger-solid {
+  background: var(--bad);
+  border-color: var(--bad);
   color: #fff;
+  font-weight: 700;
+}
+.btn--danger-solid:not(:disabled):hover {
+  filter: brightness(1.07);
 }
 .btn--danger-outline {
   background: transparent;
-  border-color: var(--bad, #c0271a);
-  color: var(--bad, #c0271a);
+  border-color: var(--bad);
+  color: var(--bad);
 }
 .btn--danger-outline:not(:disabled):hover {
-  background: var(--bad, #c0271a);
+  background: var(--bad);
   color: #fff;
 }
 .btn--ghost {

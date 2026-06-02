@@ -139,7 +139,7 @@ export function ManageAppointments({
               ) : action === 'cancel' ? (
                 confirmingId === a.id ? (
                   <span className="manage-row__confirm">
-                    <button className="btn btn--danger" onClick={() => cancel(a.id)}>
+                    <button className="btn btn--danger-solid" onClick={() => cancel(a.id)}>
                       Confirm cancel
                     </button>
                     <button className="btn btn--ghost" onClick={() => setConfirmingId(null)}>
