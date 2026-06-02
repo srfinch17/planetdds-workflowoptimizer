@@ -20,12 +20,11 @@ const rules = read("rules.json");
 const BASE = "2026-06-01";
 const END = "2027-06-30";
 
-// Keep these days at their original sparse state so the rehearsed scenarios + tests
-// (which expect specific openings on 6/4 and mornings the following week) still hold.
-const PROTECTED = new Set([
-  "2026-06-04",
-  "2026-06-07", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-13",
-]);
+// Keep the one fragile demo day sparse: scenario 1 ("next Thursday after 3") and
+// the double-book test need several open ≥3pm slots on 2026-06-04. The rest of
+// that week fills normally (scenario 2 only needs some open morning, which the
+// ~45% density leaves plenty of).
+const PROTECTED = new Set(["2026-06-04"]);
 
 // Weighted appointment-type mix (emergencies are rare).
 const TYPE_WEIGHTS = [
