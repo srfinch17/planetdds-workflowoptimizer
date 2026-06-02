@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import { Intake } from './views/Intake'
 import { Admin } from './views/Admin'
 import { Metrics } from './views/Metrics'
 import { ThemeToggle } from './components/ThemeToggle'
+import { ModeIndicator } from './components/ModeIndicator'
+import { getMetrics, type ExtractionMode } from './api'
 
 type Tab = 'intake' | 'admin' | 'metrics'
 
@@ -15,6 +17,15 @@ type Tab = 'intake' | 'admin' | 'metrics'
  */
 function App() {
   const [tab, setTab] = useState<Tab>('intake')
+  const [mode, setMode] = useState<ExtractionMode>('tiered')
+  const [online, setOnline] = useState(true)
+
+  // Is the LLM reachable (server has a key)? Gates the "agentic" mode.
+  useEffect(() => {
+    getMetrics()
+      .then((m) => setOnline(m.online))
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="app">
@@ -25,7 +36,7 @@ function App() {
             Scheduling Assistant <span>· ops console</span>
           </div>
           <div className="app-header__spacer" />
-          <div className="app-header__mode">agentic · explainable · cost-aware</div>
+          <ModeIndicator mode={mode} setMode={setMode} online={online} />
           <ThemeToggle />
         </div>
         <nav className="tabs">
@@ -51,7 +62,7 @@ function App() {
       </header>
 
       <main className="app-main">
-        {tab === 'intake' ? <Intake /> : tab === 'admin' ? <Admin /> : <Metrics />}
+        {tab === 'intake' ? <Intake mode={mode} /> : tab === 'admin' ? <Admin /> : <Metrics />}
       </main>
     </div>
   )

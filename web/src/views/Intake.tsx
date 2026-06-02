@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   postSchedule,
   getState,
-  getMetrics,
   postBook,
   fmtWeekday,
   fmtDate,
@@ -27,12 +26,6 @@ const EXAMPLES = [
   'my tooth is killing me, can I come in this evening?',
 ]
 
-const MODES: { value: ExtractionMode; label: string; help: string }[] = [
-  { value: 'tiered', label: 'Auto', help: 'Rules first; the LLM handles only what the rules can’t.' },
-  { value: 'llm', label: 'LLM only', help: 'Force the LLM to extract every request (pure AI).' },
-  { value: 'rules', label: 'Rules only', help: 'Never call the LLM — deterministic parser only.' },
-]
-
 // The seed calendar has data around early June 2026, and chrono reads "next
 // Thursday" relative to this date. Pinning it keeps results reproducible.
 const DEFAULT_REF_DATE = '2026-05-31'
@@ -40,7 +33,8 @@ const TODAY = '2026-06-01'
 const MIN_MONTH = '2026-06'
 const MAX_MONTH = '2027-06'
 
-export function Intake() {
+// `mode` is the engine setting from the header indicator (agentic/mixed/rules).
+export function Intake({ mode }: { mode: ExtractionMode }) {
   const [request, setRequest] = useState(EXAMPLES[0])
   const [refDate, setRefDate] = useState(DEFAULT_REF_DATE)
   const [loading, setLoading] = useState(false)
@@ -54,16 +48,13 @@ export function Intake() {
   const [patientPhone, setPatientPhone] = useState('')
   const [booked, setBooked] = useState<Record<string, string>>({}) // slotKey → confirmation #
   const [viewDay, setViewDay] = useState<string | null>(null) // day shown in the detail grid
-  const [mode, setMode] = useState<ExtractionMode>('tiered') // engine: Auto / LLM only / Rules only
-  const [online, setOnline] = useState(true) // is the LLM reachable (key present)?
 
   const loadState = useCallback(() => {
-    Promise.all([getState(), getMetrics()])
-      .then(([s, m]) => {
+    getState()
+      .then((s) => {
         setProviders(s.providers)
         setAppointments(s.appointments)
         setRules(s.rules)
-        setOnline(m.online)
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [])
@@ -153,27 +144,6 @@ export function Intake() {
               {ex}
             </button>
           ))}
-        </div>
-
-        <div className="engine-row">
-          <span className="engine-label">🤖 Engine</span>
-          <div className="engine-toggle">
-            {MODES.map((m) => {
-              const disabled = m.value === 'llm' && !online
-              return (
-                <button
-                  key={m.value}
-                  className={`engine-opt ${mode === m.value ? 'engine-opt--active' : ''}`}
-                  onClick={() => setMode(m.value)}
-                  disabled={disabled}
-                  title={disabled ? 'No API key on the server — LLM-only is unavailable offline.' : m.help}
-                >
-                  {m.label}
-                </button>
-              )
-            })}
-          </div>
-          {!online && <span className="tile-sub">server offline — LLM unavailable</span>}
         </div>
 
         <div className="request-actions">

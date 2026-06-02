@@ -1055,6 +1055,53 @@
   outline: none;
 }
 
+/* ---------- engine-mode indicator (header) ---------- */
+
+.mode-ind {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px 3px 11px;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.mode-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 8px var(--brand);
+  animation: pulse 2.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.mode-ind select {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.mode-ind select:focus {
+  outline: none;
+}
+.mode-ind--llm .mode-dot {
+  background: var(--violet);
+  box-shadow: 0 0 10px var(--violet);
+}
+.mode-ind--tiered .mode-dot {
+  background: var(--brand);
+  box-shadow: 0 0 10px var(--brand);
+}
+.mode-ind--rules .mode-dot {
+  background: var(--prov-c);
+  box-shadow: 0 0 8px var(--prov-c);
+}
+
 /* legend swatches that mirror the calendar block colors in both themes */
 .legend-swatch--appt {
   background: var(--appt-bg);
