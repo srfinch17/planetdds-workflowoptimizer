@@ -1832,3 +1832,40 @@ button.cal-block--hl:hover {
   color: var(--ink-soft);
   padding-left: 4px;
 }
+
+/* ============================================================
+   Narrow-screen hardening. This is a desktop/laptop ops console,
+   but it must stay clean if the window is dragged small during a
+   live demo. The big grids already reflow (recommendation cards
+   stack < 880px, metric tiles go 2-up < 880px); these rules keep
+   the header and the dense day grid from breaking at phone width.
+   ============================================================ */
+@media (max-width: 620px) {
+  .app-header {
+    padding: 0 12px;
+  }
+  .app-header__bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .app-header__title {
+    font-size: 15px;
+  }
+  /* drop the "· ops console" subtitle so the title + controls fit */
+  .app-header__title span {
+    display: none;
+  }
+}
+/* Tabs should never wrap a label onto two lines. */
+.tab {
+  white-space: nowrap;
+}
+/* The day grid keeps real 110px provider columns. When the panel is
+   wide enough they stretch (1fr) and nothing scrolls; once the window
+   is narrower than the grid's natural width it scrolls horizontally
+   instead of clipping the last provider. */
+@media (max-width: 760px) {
+  .calendar {
+    overflow-x: auto;
+  }
+}
