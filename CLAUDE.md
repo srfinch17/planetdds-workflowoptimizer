@@ -140,8 +140,15 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
 - **Month-view calendar** (`web/src/components/MonthCalendar.tsx`): navigable ~12
   months, appointments as per-dentist color chips, click a day → day-detail grid.
   On Intake it auto-jumps to the recommendation month and rings the recommended day.
+  When a request names days/dates, the calendar **greys out every day except the
+  matching, bookable ones** (`selectableDays` prop) — "Tue or Thu in late July"
+  leaves only those four days clickable; a vague request stays fully open.
 - Booking is request-driven: recommendations render as cards + clickable ★ slots on
-  the day grid (booked time shows rose/red, "taken"; open slots green, "book").
+  the day grid (booked time shows rose/red, "taken"; open slots green, "book"). The
+  selected day also lists **every open time** (`OpenTimes`) so a patient can book any
+  opening, not just the top 3 — sourced from `GET /api/availability?from&to&type&days`,
+  which runs the SAME candidate generator (eligibility/X-ray/hours all hold) and
+  returns open slots grouped by day at 30-min granularity.
   **Booking captures patient name + phone and returns a confirmation number** (DDS-####-XXXX).
 - A request marked as extracted by the LLM shows a "🤖 Extracted by Claude" badge.
 
