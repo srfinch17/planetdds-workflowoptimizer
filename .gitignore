@@ -18,3 +18,6 @@ Thumbs.db
 
 # Local tooling (machine-specific paths)
 .claude/
+
+# Never commit the assignment doc or any Word docs
+*.docx
