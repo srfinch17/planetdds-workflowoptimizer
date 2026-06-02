@@ -156,6 +156,8 @@ export function createApp(deps: AppDeps): Hono {
       timeLatest: null,
       partOfDay: null,
       preferredProviderId: null,
+      patientName: null,
+      patientPhone: null,
       rawRequest: "",
       source: "rules",
       confidence: 1,

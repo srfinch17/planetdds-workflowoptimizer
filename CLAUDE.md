@@ -153,6 +153,10 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
 - **Patient details** (name + phone) sit in a prominent bar at the top, with a
   ready-to-book status. Search works without them; booking requires them (clicking a
   slot without them focuses the field). Booking returns a confirmation number (DDS-####-XXXX).
+  If the patient states their details in the request ("this is Frank Jones, 222-333-4455 ..."),
+  both extractors pull `patientName`/`patientPhone` and the bar **pre-fills** — the rules path
+  strips the stated name before provider matching so a surname like "Jones" isn't misread as a
+  request for Dr. Jones.
 - A request marked as extracted by the LLM shows a "🤖 Extracted by Claude" badge.
 
 ## Admin & availability

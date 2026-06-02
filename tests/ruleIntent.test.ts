@@ -42,6 +42,39 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect(intent.appointmentType).not.toBe("emergency");
   });
 
+  it("pulls the patient's name and phone from the request when they state them", () => {
+    const intent = extractor.extract(
+      "This is Frank Jones, phone number 222-333-4455, I have a toothache how soon can you get me in?",
+      ctx,
+    );
+    expect(intent.patientName).toBe("Frank Jones");
+    expect(intent.patientPhone).toBe("222-333-4455");
+  });
+
+  it("leaves patient name/phone null when the request doesn't include them", () => {
+    const intent = extractor.extract("I need a cleaning next Thursday", ctx);
+    expect(intent.patientName).toBeNull();
+    expect(intent.patientPhone).toBeNull();
+  });
+
+  it("does not mistake a date phrase for a name after 'this is'", () => {
+    const intent = extractor.extract("this is killing me, my tooth hurts", ctx);
+    expect(intent.patientName).toBeNull();
+  });
+
+  it("does not read a patient's surname as a provider preference", () => {
+    // "Frank Jones" is the patient — NOT a request for Dr. Jones.
+    const intent = extractor.extract("This is Frank Jones, I'd like a cleaning next Thursday", ctx);
+    expect(intent.patientName).toBe("Frank Jones");
+    expect(intent.preferredProviderId).toBeNull();
+  });
+
+  it("still honors an explicit provider request even when the patient shares the name", () => {
+    const intent = extractor.extract("This is Frank Jones, I usually see Dr. Jones", ctx);
+    expect(intent.patientName).toBe("Frank Jones");
+    expect(intent.preferredProviderId).toBe("prov-jones");
+  });
+
   it("defers on a multi-reference date instead of confidently grabbing the first one", () => {
     // "a tuesday or thursday in late july" → chrono finds THREE references
     // (tuesday, thursday, july). The parser must not pin the first ("tuesday",

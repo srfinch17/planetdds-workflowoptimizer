@@ -81,6 +81,10 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     try {
       const res = await postSchedule(request.trim(), TODAY, mode)
       setResult(res)
+      // If the patient stated their name/phone in the request, pre-fill the
+      // booking form; otherwise leave it for them to type.
+      if (res.intent.patientName) setPatientName(res.intent.patientName)
+      if (res.intent.patientPhone) setPatientPhone(res.intent.patientPhone)
       const recDay = res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? res.intent.earliestDate ?? TODAY
       setViewDay(recDay)
       await loadAvailability(res, recDay)
@@ -192,13 +196,17 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
         <label className="field-label" htmlFor="request">
           💬 Patient request
         </label>
+        <p className="request-hint">
+          Tip: include your name and phone and we’ll fill them in for you — e.g.
+          “This is Frank Jones, 222-333-4455, I have a toothache, how soon can you get me in?”
+        </p>
         <textarea
           id="request"
           className="request-input"
           rows={2}
           value={request}
           onChange={(e) => setRequest(e.target.value)}
-          placeholder="e.g. Can I come in next Thursday after 3?"
+          placeholder="e.g. This is Frank Jones, 222-333-4455 — can I come in next Thursday after 3?"
         />
 
         <div className="examples">

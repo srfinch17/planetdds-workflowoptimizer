@@ -26,6 +26,8 @@ export const intentSchema = z.object({
   timeLatest: timeOrNull,
   partOfDay: z.enum(["morning", "afternoon", "evening"]).nullable(),
   preferredProviderId: z.string().nullable(),
+  patientName: z.string().nullable(),
+  patientPhone: z.string().nullable(),
   rawRequest: z.string(),
   source: z.enum(["rules", "llm"]),
   confidence: z.number().min(0).max(1),

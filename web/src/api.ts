@@ -15,6 +15,8 @@ export interface SchedulingIntent {
   timeLatest: string | null
   partOfDay: 'morning' | 'afternoon' | 'evening' | null
   preferredProviderId: string | null
+  patientName: string | null
+  patientPhone: string | null
   rawRequest: string
   source: 'rules' | 'llm'
   confidence: number

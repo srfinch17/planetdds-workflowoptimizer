@@ -12,6 +12,8 @@ const valid: SchedulingIntent = {
   timeLatest: null,
   partOfDay: null,
   preferredProviderId: "prov-smith",
+  patientName: null,
+  patientPhone: null,
   rawRequest: "next thursday after 3",
   source: "llm",
   confidence: 0.9,

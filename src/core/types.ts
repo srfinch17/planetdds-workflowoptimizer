@@ -82,6 +82,11 @@ export interface SchedulingIntent {
   timeLatest: string | null; // "HH:mm"
   partOfDay: "morning" | "afternoon" | "evening" | null;
   preferredProviderId: string | null;
+  // The patient's own details, IF they stated them in the request ("this is
+  // Frank Jones, 222-333-4455 ..."). Used to pre-fill the booking form; null
+  // when not given, so the patient fills them in by hand.
+  patientName: string | null;
+  patientPhone: string | null;
   rawRequest: string;
   source: "rules" | "llm"; // which path produced this (offline transparency)
   confidence: number; // 0..1

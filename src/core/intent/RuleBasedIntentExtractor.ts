@@ -42,7 +42,13 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
     const urgency = this.triageSkill
       ? mostSevere(keywordUrgency, classifyUrgency(text, this.triageSkill).urgency)
       : keywordUrgency;
-    const preferredProviderId = parseProvider(text, ctx.store);
+    // Patient details parse off the ORIGINAL request (names are capitalized).
+    const { patientName, patientPhone } = parsePatient(request);
+    // Strip the patient's OWN name before matching providers, so "Frank Jones"
+    // (the patient) isn't read as a request for Dr. Jones. A separate, explicit
+    // "Dr. Jones" later in the text still matches.
+    const providerText = patientName ? text.replace(patientName.toLowerCase(), " ") : text;
+    const preferredProviderId = parseProvider(providerText, ctx.store);
 
     // Confidence = how many independent signals we managed to resolve.
     const signals = [
@@ -64,6 +70,8 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
       timeLatest,
       partOfDay,
       preferredProviderId,
+      patientName,
+      patientPhone,
       rawRequest: request,
       source: "rules",
       confidence,
@@ -173,6 +181,28 @@ function toHHmm(hourTok: string, minTok: string | undefined, ampm: string | unde
 }
 
 // --- keyword tables ---
+
+/**
+ * Pull the patient's own name + phone out of the request when they volunteer it
+ * ("this is Frank Jones, 222-333-4455 ..."). Parsed from the ORIGINAL string so
+ * a capitalized name can be told apart from ordinary words — that's what keeps
+ * "this is killing me" from being read as a name.
+ */
+function parsePatient(request: string): { patientName: string | null; patientPhone: string | null } {
+  // A US-style 10-digit number, optional country code + separators. The strict
+  // 3-3-4 grouping means a bare date like "2026-07-21" can't masquerade as one.
+  const phone = request.match(/(?:\+?\d{1,2}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+  const patientPhone = phone ? phone[0].trim() : null;
+
+  // An intro phrase ("this is", "my name is", "I'm") followed by 1-3 Capitalized
+  // words. Requiring an initial capital rejects "this is killing me".
+  const name = request.match(
+    /(?:[Tt]his is|[Mm]y name is|[Ii]['’]?m|[Ii] am|[Nn]ame['’]?s)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/,
+  );
+  const patientName = name ? name[1]!.trim() : null;
+
+  return { patientName, patientPhone };
+}
 
 function parseType(text: string): string | null {
   if (/\b(clean|cleaned|cleaning|hygiene)\b/.test(text)) return "cleaning";

@@ -23,6 +23,8 @@ function llmIntent(): SchedulingIntent {
     timeLatest: null,
     partOfDay: "morning",
     preferredProviderId: null,
+    patientName: null,
+    patientPhone: null,
     rawRequest: "ambiguous",
     source: "llm",
     confidence: 0.85,

@@ -18,6 +18,8 @@ function intent(overrides: Partial<SchedulingIntent>): SchedulingIntent {
     timeLatest: null,
     partOfDay: null,
     preferredProviderId: null,
+    patientName: null,
+    patientPhone: null,
     rawRequest: "test",
     source: "rules",
     confidence: 1,
