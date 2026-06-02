@@ -31,9 +31,14 @@ consistent and explainable. Mock data is JSON.
   adapter, and web/CLI/tests are all clients.
 
 ### Three goals, one design
-1. **Cost-conscious:** the LLM is called only when the rule parser can't resolve
-   the request. The dashboard shows % handled free + est. cost/1000 requests.
-   Model = Claude Haiku + prompt caching.
+1. **Cost-conscious:** the real, *measured* lever is that the LLM is called only
+   when the rule parser can't resolve the request — the dashboard shows % handled
+   free + est. cost/1000 requests, and that's the number that moves. Model = cheap
+   Claude Haiku. Prompt caching (`cache_control: ephemeral`) is wired, but **honest
+   note:** at this prompt size (~450 tokens) it's below Haiku's minimum-cacheable
+   threshold, so it's currently a no-op — the dashboard's `cacheReadTokens` will read
+   0. It's left in because it activates for free as the prompt grows (more providers,
+   examples, multi-turn) with no code change; it is NOT what makes this cheap today.
 2. **Rules vs. skills (precise vocabulary):** hard constraints are **structured
    data** enforced deterministically; the LLM only *translates* an admin's English
    sentence into a rule. A real Anthropic **Agent Skill** (dental-triage) supplies

@@ -23,10 +23,12 @@ export interface AnthropicClientOptions {
 
 /**
  * Real Anthropic-backed client. The constant `system` prompt is sent as a
- * cached block (cache_control: ephemeral): the schema + instructions are
- * identical on every call, so caching them cuts input cost on repeat requests.
- * That's one of the three visible cost levers (Haiku model + caching +
- * only-call-when-needed).
+ * cache_control:ephemeral block so it caches once it's large enough to qualify.
+ * HONEST CAVEAT: at the current ~450-token prompt size this is below Haiku's
+ * minimum cacheable length, so no cache hit actually occurs (cacheRead stays 0);
+ * it's wired so it activates for free as the prompt grows. The cost lever that
+ * actually bites today is calling the LLM ONLY when the rule parser can't cope
+ * (the % handled free on the dashboard) — see costTracker.
  */
 export class AnthropicClient implements LlmClient {
   private readonly sdk: Anthropic;
