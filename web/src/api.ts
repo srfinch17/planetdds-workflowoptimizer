@@ -168,6 +168,7 @@ export interface MetricsResponse {
   costPer1000Usd: number
   avgLatencyMs: number
   emergencyCallbacks: number
+  online: boolean
   tokenTotals: {
     calls: number
     inputTokens: number
@@ -190,11 +191,17 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export function postSchedule(request: string, refDate?: string): Promise<ScheduleResponse> {
+export type ExtractionMode = 'tiered' | 'llm' | 'rules'
+
+export function postSchedule(
+  request: string,
+  refDate?: string,
+  mode?: ExtractionMode,
+): Promise<ScheduleResponse> {
   return fetch('/api/schedule', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ request, refDate }),
+    body: JSON.stringify({ request, refDate, mode }),
   }).then((r) => jsonOrThrow<ScheduleResponse>(r))
 }
 

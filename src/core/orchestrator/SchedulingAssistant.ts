@@ -2,6 +2,7 @@ import type { ScheduleStore } from "../store/ScheduleStore";
 import type { IntentExtractor } from "../intent/IntentExtractor";
 import type { ScheduleReasoningAgent } from "../schedule/ScheduleReasoningAgent";
 import type { Recommendation, SchedulingIntent, Escalation } from "../types";
+import type { ExtractionMode } from "../intent/IntentExtractor";
 import { assessEscalation, type TriageSkill } from "../skills/triage";
 import { toIso } from "../time";
 
@@ -42,7 +43,10 @@ export class SchedulingAssistant {
     private readonly triageSkill?: TriageSkill,
   ) {}
 
-  async handle(rawRequest: string, opts: { refDate?: string } = {}): Promise<AssistantResult> {
+  async handle(
+    rawRequest: string,
+    opts: { refDate?: string; mode?: ExtractionMode } = {},
+  ): Promise<AssistantResult> {
     const refDate = opts.refDate ?? toIso(new Date()).slice(0, 10);
 
     // Step 0 — emergency check FIRST. This is the safety override: a request
@@ -52,7 +56,7 @@ export class SchedulingAssistant {
 
     // Step 1 — understand the request (await so a sync rule-based or async LLM
     // extractor both work through the same call site).
-    const intent = await this.extractor.extract(rawRequest, { refDate, store: this.store });
+    const intent = await this.extractor.extract(rawRequest, { refDate, store: this.store, mode: opts.mode });
 
     // Step 2 — rank the bookable slots deterministically. Still computed for an
     // emergency, so staff can offer the soonest opening on the callback.

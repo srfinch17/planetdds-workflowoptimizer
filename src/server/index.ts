@@ -55,7 +55,7 @@ const triageSkill = loadDefaultTriageSkill();
 const tiered = new TieredIntentExtractor(new RuleBasedIntentExtractor(triageSkill), llm, { offline });
 const assistant = new SchedulingAssistant(tiered, new ScheduleReasoningAgent(), store, 3, triageSkill);
 
-const app = createApp({ store, assistant, tiered, costTracker, eventLog, ruleLlm: client ?? undefined });
+const app = createApp({ store, assistant, tiered, costTracker, eventLog, ruleLlm: client ?? undefined, online: !offline });
 
 serve({ fetch: app.fetch, port: PORT }, (info) => {
   console.log("");

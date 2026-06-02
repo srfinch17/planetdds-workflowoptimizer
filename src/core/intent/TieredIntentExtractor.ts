@@ -45,6 +45,24 @@ export class TieredIntentExtractor implements IntentExtractor {
   }
 
   async extract(request: string, ctx: IntentContext): Promise<SchedulingIntent> {
+    const mode = ctx.mode ?? "tiered";
+
+    // Rules-only: never touch the LLM.
+    if (mode === "rules") {
+      return this.record("rules", await this.rule.extract(request, ctx));
+    }
+
+    // LLM-only ("pure AI" demo): always use the LLM; fall back to rules only if
+    // the LLM is unreachable (no key) or errors, so the patient never gets stuck.
+    if (mode === "llm") {
+      if (this.offline) return this.record("offline-fallback", await this.rule.extract(request, ctx));
+      try {
+        return this.record("llm", await this.llm.extract(request, ctx));
+      } catch {
+        return this.record("llm-failed-fallback", await this.rule.extract(request, ctx));
+      }
+    }
+
     // Tier 1 — always run the free deterministic parser.
     const ruleIntent = await this.rule.extract(request, ctx);
 

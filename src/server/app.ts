@@ -35,6 +35,7 @@ export interface AppDeps {
   costTracker: CostTracker;
   eventLog: EventLog; // audit trail + activity dashboard
   ruleLlm?: LlmClient; // optional: lets POST /api/rules fall back to the LLM when present
+  online?: boolean; // true when an API key is present (LLM reachable)
 }
 
 /**
@@ -42,7 +43,7 @@ export interface AppDeps {
  * on a port (index.ts) or drive it directly in a test.
  */
 export function createApp(deps: AppDeps): Hono {
-  const { store, assistant, tiered, costTracker, eventLog, ruleLlm } = deps;
+  const { store, assistant, tiered, costTracker, eventLog, ruleLlm, online } = deps;
   const app = new Hono();
   const latency = new LatencyMeter(); // how fast we answer, server-side
   const callbacks: CallbackRecord[] = []; // the staff "call this patient back" queue
@@ -62,11 +63,12 @@ export function createApp(deps: AppDeps): Hono {
       return c.json({ error: "request must be a non-empty string" }, 400);
     }
     const refDate = typeof body.refDate === "string" ? body.refDate : undefined;
+    const mode = body.mode === "llm" || body.mode === "rules" ? body.mode : undefined;
 
     const costBefore = costTracker.usd;
     const callsBefore = costTracker.totals.calls;
     const t0 = performance.now();
-    const { intent, recommendation, escalation } = await assistant.handle(request, { refDate });
+    const { intent, recommendation, escalation } = await assistant.handle(request, { refDate, mode });
     const latencyMs = Math.round((performance.now() - t0) * 10) / 10;
     latency.record(latencyMs);
 
@@ -151,6 +153,7 @@ export function createApp(deps: AppDeps): Hono {
       avgLatencyMs: Math.round(latency.avgMs * 10) / 10,
       tokenTotals: costTracker.totals,
       emergencyCallbacks: callbacks.length, // emergencies/urgent escalations queued
+      online: online ?? false, // is the LLM reachable (key present)?
     });
   });
 
