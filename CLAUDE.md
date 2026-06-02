@@ -53,6 +53,10 @@ consistent and explainable. Mock data is JSON.
   `confidence` are server-set — so a prompt-injected model is **structurally
   contained**: it can only ever produce a bounded `SchedulingIntent`, never free
   text or smuggled fields. Covered by `tests/llmSafety.test.ts`.
+- **Never empty:** if the requested window is fully booked (common once a hard
+  constraint like X-ray-only rooms bites on a busy week), the reasoning agent
+  widens the search to the soonest real opening and flags it `bestEffort` — a real
+  scheduler offers the nearest slot, never "nothing."
 - **Explainable:** explanations are generated FROM the scoring factors → always faithful.
 - **Emergency safety:** a request that reads as a medical emergency escalates
   *before* scheduling and forces a staff callback — deterministic, works offline.
@@ -152,7 +156,8 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   range) override all providers; teaching one cancels every appointment in the window
   and moves them to a **"needs rescheduling" queue** (`/api/state.reschedule`).
 - Admin can **view and delete rules** (with timestamps + a "superseded" badge) and
-  **reset to default** (`POST /api/reset` re-seeds the store and clears logs/queues).
+  **reset to default** (`POST /api/reset` re-seeds the store and clears logs,
+  queues, AND the cost/efficiency metrics — a genuinely clean slate).
 
 ## Data
 - `src/core/data/*.json` are the mock store. `appointments.json` holds ~a year of
