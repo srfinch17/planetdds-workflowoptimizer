@@ -143,13 +143,16 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   When a request names days/dates, the calendar **greys out every day except the
   matching, bookable ones** (`selectableDays` prop) — "Tue or Thu in late July"
   leaves only those four days clickable; a vague request stays fully open.
-- Booking is request-driven: recommendations render as cards + clickable ★ slots on
-  the day grid (booked time shows rose/red, "taken"; open slots green, "book"). The
-  selected day also lists **every open time** (`OpenTimes`) so a patient can book any
-  opening, not just the top 3 — sourced from `GET /api/availability?from&to&type&days`,
-  which runs the SAME candidate generator (eligibility/X-ray/hours all hold) and
-  returns open slots grouped by day at 30-min granularity.
-  **Booking captures patient name + phone and returns a confirmation number** (DDS-####-XXXX).
+- Booking is request-driven: recommendations render as cards, and on the day grid
+  **every open time is a clickable green "★ book" button** (booked time shows
+  rose/red, "taken") — so a patient can book ANY opening, not just the top 3, on any
+  matching day. Open slots come from `GET /api/availability?from&to&type&days`, which
+  runs the SAME candidate generator (eligibility/X-ray/hours all hold) and returns
+  openings grouped by day. Slots are **30-minute** granularity (candidateGenerator
+  `SLOT_STEP_MIN`) so recommendations and open times share the same grid rows.
+- **Patient details** (name + phone) sit in a prominent bar at the top, with a
+  ready-to-book status. Search works without them; booking requires them (clicking a
+  slot without them focuses the field). Booking returns a confirmation number (DDS-####-XXXX).
 - A request marked as extracted by the LLM shows a "🤖 Extracted by Claude" badge.
 
 ## Admin & availability
