@@ -3,6 +3,7 @@ import type { ScheduleStore } from "../store/ScheduleStore";
 import type { AvailabilityRule, Weekday } from "../types";
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 /** A rule WITHOUT its id — the parser produces this; the store assigns the id. */
@@ -16,12 +17,14 @@ export type RuleDraft = Omit<AvailabilityRule, "id">;
  */
 export const llmRuleSchema = z
   .object({
-    providerName: z.string().min(1),
-    kind: z.enum(["block", "dayoff", "workday"]),
+    providerName: z.string().min(1), // for a closure the LLM uses "office"
+    kind: z.enum(["block", "dayoff", "workday", "closure"]),
     recurrence: z.enum(["daily"]).nullish(),
     weekday: z.enum(WEEKDAYS).nullish(),
     start: z.string().regex(HHMM).nullish(),
     end: z.string().regex(HHMM).nullish(),
+    startDate: z.string().regex(DATE).nullish(),
+    endDate: z.string().regex(DATE).nullish(),
     reason: z.string().nullish(),
   })
   .refine((r) => r.kind !== "block" || (!!r.start && !!r.end), {
@@ -32,6 +35,9 @@ export const llmRuleSchema = z
   })
   .refine((r) => r.kind !== "workday" || !!r.weekday, {
     message: "a workday rule requires a weekday",
+  })
+  .refine((r) => r.kind !== "closure" || (!!r.startDate && !!r.endDate), {
+    message: "a closure rule requires startDate and endDate",
   });
 
 export type LlmRuleDraft = z.infer<typeof llmRuleSchema>;
@@ -62,6 +68,18 @@ export function parseLlmRule(input: unknown, store: ScheduleStore): ParseRuleRes
     return { ok: false, error: msg || "invalid rule" };
   }
   const d = parsed.data;
+  if (d.kind === "closure") {
+    return {
+      ok: true,
+      rule: {
+        providerId: "office",
+        kind: "closure",
+        startDate: d.startDate!,
+        endDate: d.endDate!,
+        reason: d.reason?.trim() || "office closed",
+      },
+    };
+  }
   const providerId = resolveProviderId(d.providerName, store);
   if (!providerId) {
     return { ok: false, error: `unknown provider "${d.providerName}"` };

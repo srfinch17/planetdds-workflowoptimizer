@@ -48,12 +48,15 @@ export interface AvailabilityRule {
   providerId: string;
   // dayoff: provider does NOT work this weekday. workday: provider DOES work
   // this weekday (can add a day not in base hours). block: a recurring time
-  // block on working days (e.g. lunch).
-  kind: "block" | "dayoff" | "workday";
+  // block on working days (e.g. lunch). closure: the whole office is closed for
+  // a date range (providerId "office") — overrides everything.
+  kind: "block" | "dayoff" | "workday" | "closure";
   recurrence?: "daily";
   weekday?: Weekday;
   start?: string; // "HH:mm" — block start, or custom working-hours start for a workday
   end?: string; // "HH:mm" — block end, or custom working-hours end for a workday
+  startDate?: string; // "YYYY-MM-DD" — closure start (inclusive)
+  endDate?: string; // "YYYY-MM-DD" — closure end (inclusive)
   reason: string;
   createdAt?: string; // ISO; newest rule wins when two rules conflict (missing = oldest)
 }

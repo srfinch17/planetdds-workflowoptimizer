@@ -6,6 +6,13 @@ export interface DayAvailability {
   hours: { start: string; end: string };
 }
 
+/** The office-wide closure covering a date, if any (overrides all providers). */
+export function officeClosure(date: string, rules: AvailabilityRule[]): AvailabilityRule | undefined {
+  return rules.find(
+    (r) => r.kind === "closure" && !!r.startDate && !!r.endDate && date >= r.startDate && date <= r.endDate,
+  );
+}
+
 /**
  * Resolve whether a provider works on a given date, and with what hours.
  *

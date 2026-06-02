@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Appointment, Provider, AvailabilityRule } from '../api'
-import { worksOn } from '../availability'
+import { worksOn, officeClosure } from '../availability'
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MONTHS = [
@@ -80,7 +80,8 @@ export function MonthCalendar({
     return map
   }, [appointments, month])
 
-  const worksThatDay = (date: string): boolean => providers.some((p) => worksOn(p, date, rules).works)
+  const worksThatDay = (date: string): boolean =>
+    !officeClosure(date, rules) && providers.some((p) => worksOn(p, date, rules).works)
 
   const [yy, mm] = month.split('-').map(Number)
   const first = new Date(yy, mm - 1, 1)

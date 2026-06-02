@@ -33,6 +33,9 @@ export interface ScheduleStore {
   /** Book a candidate slot for a patient; returns the created appointment. */
   book(slot: CandidateSlot, patientId: string): Appointment;
 
+  /** Remove an appointment by id (e.g. an office closure cancels it). */
+  cancelAppointment(id: string): Appointment | undefined;
+
   /** Reset the store to the seed defaults (drops runtime bookings/rules). */
   reload(): void;
 }

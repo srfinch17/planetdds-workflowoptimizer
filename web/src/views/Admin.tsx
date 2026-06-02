@@ -14,6 +14,7 @@ import { Dashboard } from '../components/Dashboard'
 import { RuleTeacher } from '../components/RuleTeacher'
 import { RulesList } from '../components/RulesList'
 import { CallbackQueue } from '../components/CallbackQueue'
+import { RescheduleQueue } from '../components/RescheduleQueue'
 import { LogPanel } from '../components/LogPanel'
 
 // The seed calendar has its appointments on this Thursday — a sensible default
@@ -93,6 +94,8 @@ export function Admin() {
       {state && metrics && <Dashboard metrics={metrics} state={state} day={day} />}
 
       <CallbackQueue callbacks={callbacks} />
+
+      {state && <RescheduleQueue records={state.reschedule} providers={state.providers} patients={state.patients} />}
 
       {state && (
         <section className="calendar-panel">

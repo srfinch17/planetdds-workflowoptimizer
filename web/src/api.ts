@@ -140,13 +140,22 @@ export interface Appointment {
 export interface AvailabilityRule {
   id: string
   providerId: string
-  kind: 'block' | 'dayoff' | 'workday'
+  kind: 'block' | 'dayoff' | 'workday' | 'closure'
   recurrence?: 'daily'
   weekday?: Weekday
   start?: string
   end?: string
+  startDate?: string
+  endDate?: string
   reason: string
   createdAt?: string
+}
+
+export interface RescheduleRecord {
+  id: string
+  appointment: Appointment
+  reason: string
+  flaggedAt: string
 }
 
 export interface StateResponse {
@@ -156,6 +165,7 @@ export interface StateResponse {
   appointmentTypes: { type: string; durationMin: number; defaultUrgency: Urgency }[]
   appointments: Appointment[]
   rules: AvailabilityRule[]
+  reschedule: RescheduleRecord[]
 }
 
 export interface MetricsResponse {

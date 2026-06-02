@@ -2,6 +2,13 @@ import type { Provider, AvailabilityRule, Weekday } from './api'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+/** The office-wide closure covering a date, if any (overrides all providers). */
+export function officeClosure(date: string, rules: AvailabilityRule[]): AvailabilityRule | undefined {
+  return rules.find(
+    (r) => r.kind === 'closure' && !!r.startDate && !!r.endDate && date >= r.startDate && date <= r.endDate,
+  )
+}
+
 /**
  * Mirror of the server's resolveAvailability: base workdays/hours, with
  * workday/dayoff rules layered on top (newest createdAt wins). Keeps the

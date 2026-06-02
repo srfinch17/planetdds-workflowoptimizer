@@ -1,5 +1,5 @@
 import { fmtTime, type Provider, type Appointment, type AvailabilityRule } from '../api'
-import { worksOn } from '../availability'
+import { worksOn, officeClosure } from '../availability'
 
 // The grid window: clinic-wide open/close in 30-minute rows. Per-provider hours
 // inside this window are shaded "closed" so the grid is honest about who's in.
@@ -49,6 +49,7 @@ export function Calendar({
   onBookSlot,
 }: CalendarProps) {
   const dayAppts = appointments.filter((a) => a.start.slice(0, 10) === day)
+  const closed = officeClosure(day, rules)
 
   const timeLabels: string[] = []
   for (let i = 0; i < ROWS; i++) {
@@ -87,10 +88,10 @@ export function Calendar({
       {providers.map((p, idx) => {
         const col = 2 + idx
         const av = worksOn(p, day, rules)
-        if (!av.works) {
+        if (closed || !av.works) {
           return (
             <div key={`off-${p.id}`} className="cal-block cal-block--off" style={{ gridColumn: col, gridRow: `2 / ${2 + ROWS}` }}>
-              day off
+              {closed ? '🔒 office closed' : 'day off'}
             </div>
           )
         }

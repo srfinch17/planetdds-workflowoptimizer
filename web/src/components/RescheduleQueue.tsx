@@ -1,0 +1,47 @@
+import { fmtWeekday, fmtDate, fmtTime, type RescheduleRecord, type Provider, type Patient } from '../api'
+
+/**
+ * Appointments an office closure cancelled. The office MUST be closed, so these
+ * can't be auto-rebooked — staff phone each patient to reschedule. Surfaced here
+ * so nothing falls through the cracks.
+ */
+export function RescheduleQueue({
+  records,
+  providers,
+  patients,
+}: {
+  records: RescheduleRecord[]
+  providers: Provider[]
+  patients: Patient[]
+}) {
+  const provName = (id: string) => providers.find((p) => p.id === id)?.name ?? id
+  const patName = (id: string) => patients.find((p) => p.id === id)?.name ?? id
+
+  return (
+    <section className="card callback-queue">
+      <span className="field-label">
+        🔁 Needs rescheduling{' '}
+        {records.length > 0 && <span className="cb-count">{records.length}</span>}
+      </span>
+      {records.length === 0 ? (
+        <p className="tile-sub">Nothing pending. Office closures move affected appointments here.</p>
+      ) : (
+        <ul className="cb-list">
+          {records.map((r) => (
+            <li key={r.id} className="cb-item cb-item--callback">
+              <div className="cb-item__head">
+                <span className="pill pill--warn">reschedule</span>
+                <span className="cb-time">{r.reason}</span>
+              </div>
+              <p className="cb-request">
+                {patName(r.appointment.patientId)} · {provName(r.appointment.providerId)} ·{' '}
+                {fmtWeekday(r.appointment.start)} {fmtDate(r.appointment.start)} {fmtTime(r.appointment.start)} ·{' '}
+                {r.appointment.type}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}

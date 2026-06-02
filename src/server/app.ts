@@ -22,6 +22,14 @@ interface CallbackRecord {
   createdAt: string;
 }
 
+/** An appointment an office closure cancelled — staff must reschedule it. */
+interface RescheduleRecord {
+  id: string;
+  appointment: ReturnType<ScheduleStore["book"]>;
+  reason: string;
+  flaggedAt: string;
+}
+
 /**
  * Everything the HTTP layer needs, injected. Nothing here knows about ports,
  * .env, or the Anthropic client — those live only in index.ts. That separation
@@ -47,6 +55,7 @@ export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
   const latency = new LatencyMeter(); // how fast we answer, server-side
   const callbacks: CallbackRecord[] = []; // the staff "call this patient back" queue
+  const reschedule: RescheduleRecord[] = []; // appts an office closure cancelled
 
   // Any unhandled throw becomes a logged error event + a clean 500.
   app.onError((err, c) => {
@@ -130,6 +139,7 @@ export function createApp(deps: AppDeps): Hono {
       appointmentTypes: store.getAppointmentTypes(),
       appointments: store.getAppointments(),
       rules: store.getRules(),
+      reschedule, // appts an office closure flagged for staff to rebook
     });
   });
 
@@ -242,7 +252,29 @@ export function createApp(deps: AppDeps): Hono {
 
     store.addRule(rule);
     eventLog.record("rule_added", { outcome: "added", sentence, rule, source: parsed.source });
-    return c.json({ rule, source: parsed.source, rules: store.getRules() });
+
+    // An office closure cancels every appointment in its window and flags them
+    // for staff to reschedule (the office MUST be closed — nothing else to do).
+    let rescheduled = 0;
+    if (rule.kind === "closure" && rule.startDate && rule.endDate) {
+      for (const a of [...store.getAppointments()]) {
+        const day = a.start.slice(0, 10);
+        if (day >= rule.startDate && day <= rule.endDate) {
+          const cancelled = store.cancelAppointment(a.id);
+          if (cancelled) {
+            reschedule.unshift({
+              id: `rs-${cancelled.id}`,
+              appointment: cancelled,
+              reason: rule.reason,
+              flaggedAt: new Date().toISOString(),
+            });
+            rescheduled += 1;
+          }
+        }
+      }
+      eventLog.record("rule_added", { outcome: "closure", rule, rescheduled });
+    }
+    return c.json({ rule, source: parsed.source, rules: store.getRules(), rescheduled });
   });
 
   // Delete a rule by id (admin removing/superseding a scheduling rule).
@@ -260,6 +292,7 @@ export function createApp(deps: AppDeps): Hono {
     store.reload();
     eventLog.reset();
     callbacks.length = 0;
+    reschedule.length = 0;
     return c.json({ ok: true });
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveAvailability } from "../src/core/schedule/availability";
+import { resolveAvailability, officeClosure } from "../src/core/schedule/availability";
 import type { AvailabilityRule, Provider } from "../src/core/types";
 
 const pana: Provider = {
@@ -49,5 +49,15 @@ describe("resolveAvailability", () => {
       rule({ kind: "dayoff", weekday: "Sat", createdAt: "2026-06-02T09:00:00Z" }),
     ];
     expect(resolveAvailability(pana, SAT, reversed).works).toBe(false);
+  });
+});
+
+describe("officeClosure", () => {
+  const closure = rule({ providerId: "office", kind: "closure", startDate: "2026-08-04", endDate: "2026-08-06" });
+  it("matches dates inside the closure window (inclusive), not outside", () => {
+    expect(officeClosure("2026-08-04", [closure])).toBeTruthy();
+    expect(officeClosure("2026-08-06", [closure])).toBeTruthy();
+    expect(officeClosure("2026-08-03", [closure])).toBeUndefined();
+    expect(officeClosure("2026-08-07", [closure])).toBeUndefined();
   });
 });

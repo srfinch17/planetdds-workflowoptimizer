@@ -5,6 +5,7 @@ const EXAMPLES = [
   'Dr. Pana now works Saturdays',
   'Dr. Jones takes lunch from 12 to 1 every day',
   'Dr. Smith never works Wednesdays',
+  'The office is closed Aug 4 to 6 for plumbing',
 ]
 
 /**

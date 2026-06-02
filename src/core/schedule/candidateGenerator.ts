@@ -1,7 +1,7 @@
 import type { Appointment, CandidateSlot, SchedulingIntent, Weekday } from "../types";
 import type { ScheduleStore } from "../store/ScheduleStore";
 import { addMinutes, overlaps, toIso, weekdayOf, withinHours } from "../time";
-import { resolveAvailability } from "./availability";
+import { resolveAvailability, officeClosure } from "./availability";
 
 const SLOT_STEP_MIN = 15; // granularity of candidate start times
 const DEFAULT_DURATION_MIN = 30;
@@ -48,6 +48,8 @@ export function generateCandidates(
   for (const date of dates) {
     const wd = weekdayOf(`${date}T00:00:00`);
     if (allowedWeekdays.size > 0 && !allowedWeekdays.has(wd)) continue;
+    // Office-wide closure: nobody is bookable this day, regardless of provider.
+    if (officeClosure(date, rules)) continue;
     const appts = apptsByDate.get(date) ?? [];
 
     for (const provider of store.getProviders()) {

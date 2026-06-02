@@ -1,3 +1,4 @@
+import * as chrono from "chrono-node";
 import type { ScheduleStore } from "../store/ScheduleStore";
 import type { Weekday } from "../types";
 import type { LlmClient } from "../llm/anthropicClient";
@@ -23,6 +24,21 @@ const WEEKDAY_WORDS: Record<string, Weekday> = {
  */
 export function regexParseRule(sentence: string, store: ScheduleStore): RuleDraft | null {
   const text = sentence.toLowerCase();
+
+  // --- office closure (no provider): "office closed Aug 4–6 for plumbing" ---
+  if (/\b(office|practice|clinic)\b/.test(text) && /\b(closed|close|closure|shut|shutdown)\b/.test(text)) {
+    const range = parseClosureDates(sentence);
+    if (range) {
+      return {
+        providerId: "office",
+        kind: "closure",
+        startDate: range.start,
+        endDate: range.end,
+        reason: closureReason(text),
+      };
+    }
+  }
+
   const providerId = findProvider(text, store);
   if (!providerId) return null;
 
@@ -139,6 +155,23 @@ function labelFor(text: string): string {
   return "blocked";
 }
 
+/** Parse a closure date range with chrono ("Aug 4 to 6", "August 4"). */
+function parseClosureDates(sentence: string): { start: string; end: string } | null {
+  const results = chrono.parse(sentence, new Date(), { forwardDate: true });
+  if (results.length === 0) return null;
+  const r = results[0]!;
+  const start = localDate(r.start.date());
+  const end = r.end ? localDate(r.end.date()) : start;
+  return { start, end };
+}
+function localDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function closureReason(text: string): string {
+  const m = text.match(/\bfor\s+([a-z][a-z\s]{2,30})/);
+  return m ? `closed — ${m[1]!.trim()}` : "office closed";
+}
+
 /**
  * Normalize a matched time to "HH:mm". Explicit am/pm wins; otherwise a clinic
  * heuristic: a bare 1–7 means afternoon (offices open ~8–17). Same rule the
@@ -167,6 +200,7 @@ function buildSystemPrompt(store: ScheduleStore): string {
     'Use "block" for a recurring time the provider is unavailable (lunch, meeting); include start+end (24h).',
     'Use "dayoff" for a whole weekday the provider does NOT work; include weekday.',
     'Use "workday" for a weekday the provider DOES now work (adding a day); include weekday, and start+end only if custom hours are given.',
+    'Use "closure" when the whole OFFICE is closed for dates (e.g. "office closed Aug 4-6"); set providerName to "office" and include startDate + endDate as YYYY-MM-DD.',
     "Providers:",
     providers,
   ].join("\n");
