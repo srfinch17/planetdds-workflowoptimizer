@@ -49,6 +49,23 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect(extractor.extract("I need a cleaning next Thursday", ctx).action).toBe("book");
   });
 
+  it("treats an identified cancel/reschedule as high-confidence (stays on the free path)", () => {
+    // A cancel needs only an action + WHO — when the patient is identified the
+    // rules are complete, so confidence must clear the LLM-escalation threshold.
+    const named = extractor.extract("This is Jane Doe, please cancel my appointment", ctx);
+    expect(named.confidence).toBeGreaterThanOrEqual(0.6);
+    const byPhone = extractor.extract("reschedule my appointment, my number is 949-555-0120", ctx);
+    expect(byPhone.confidence).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it("treats a cancel with NO identifiable patient as low-confidence (escalates to the LLM)", () => {
+    // No name/phone resolved (lowercase name the capitalized regex misses) — we
+    // want the tiered router to escalate so the LLM can recover the identity.
+    const intent = extractor.extract("cancel my appointment please", ctx);
+    expect(intent.action).toBe("cancel");
+    expect(intent.confidence).toBeLessThan(0.6);
+  });
+
   it("pulls the patient's name and phone from the request when they state them", () => {
     const intent = extractor.extract(
       "This is Frank Jones, phone number 222-333-4455, I have a toothache how soon can you get me in?",

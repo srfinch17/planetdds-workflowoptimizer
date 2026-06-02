@@ -52,7 +52,8 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
     const providerText = patientName ? text.replace(patientName.toLowerCase(), " ") : text;
     const preferredProviderId = parseProvider(providerText, ctx.store);
 
-    // Confidence = how many independent signals we managed to resolve.
+    // Confidence = how many independent signals we resolved. This measures
+    // BOOKING completeness (date / time / type / provider / urgency).
     const signals = [
       dateResolved,
       timeResolved,
@@ -60,7 +61,18 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
       preferredProviderId !== null,
       urgency !== "routine",
     ].filter(Boolean).length;
-    const confidence = clamp(0.3 + 0.18 * signals, 0, 0.95);
+    let confidence = clamp(0.3 + 0.18 * signals, 0, 0.95);
+
+    // Cancel / reschedule have a DIFFERENT notion of completeness: they need an
+    // action + WHO to act on, not a date/time/type. Once the patient is
+    // identified (name or phone), the rules already have everything required —
+    // so keep it on the free deterministic path instead of paying for an LLM
+    // call that would only confirm the same thing. When the patient is NOT
+    // identified (e.g. a lowercase "this is jane doe" the capitalized-name regex
+    // misses), stay low so the tiered router escalates to the LLM to recover it.
+    if (action === "cancel" || action === "reschedule") {
+      confidence = patientName !== null || patientPhone !== null ? 0.9 : 0.3;
+    }
 
     return {
       action,
