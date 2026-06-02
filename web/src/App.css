@@ -294,25 +294,12 @@
   padding: 3px 10px;
 }
 
+/* Submit button under a text input sits bottom-right, by convention. */
 .request-actions {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
-}
-.ref-date {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--ink-soft);
-}
-.ref-date input {
-  font: inherit;
-  padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--ink);
 }
 
 .intent-card {
@@ -1386,7 +1373,6 @@
 /* focus glow */
 .request-input:focus,
 .rule-input:focus,
-.ref-date input:focus,
 .calendar-toolbar input:focus,
 select:focus-visible {
   box-shadow: 0 0 0 3px var(--brand-soft);
