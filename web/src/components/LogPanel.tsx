@@ -111,6 +111,8 @@ export function LogPanel() {
           <div className="log-totals">
             <span className="pill">requests {stats.byType.schedule_request ?? 0}</span>
             <span className="pill pill--good">booked {stats.bookings.booked}</span>
+            <span className="pill">rescheduled {stats.bookings.rescheduled}</span>
+            <span className="pill">cancelled {stats.bookings.cancelled}</span>
             <span className="pill pill--warn">conflicts {stats.bookings.conflict}</span>
             <span className="pill pill--bad">emergencies {stats.escalations.emergency}</span>
             <span className="pill pill--warn">callbacks {stats.escalations.callback}</span>
@@ -168,10 +170,13 @@ function summarize(e: LogEvent): string {
       return `"${d.request}" · ${d.path} · ${d.slotCount} slots${
         d.escalationLevel && d.escalationLevel !== 'none' ? ` · ${d.escalationLevel}` : ''
       }`
-    case 'booking':
-      return d.outcome === 'conflict'
-        ? `conflict: ${d.providerId} @ ${String(d.start).slice(11, 16)}`
-        : `${d.providerId} @ ${String(d.start).slice(11, 16)} (${d.patientId})`
+    case 'booking': {
+      const t = `${d.providerId} @ ${String(d.start).slice(11, 16)} (${d.patientId})`
+      if (d.outcome === 'conflict') return `conflict: ${d.providerId} @ ${String(d.start).slice(11, 16)}`
+      if (d.outcome === 'cancelled') return `cancelled · ${t}`
+      if (d.outcome === 'rescheduled') return `rescheduled → ${t}`
+      return `booked · ${t}`
+    }
     case 'escalation':
       return `${d.level} — "${d.matched}"`
     case 'rule_added':

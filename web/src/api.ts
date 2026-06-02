@@ -107,7 +107,7 @@ export interface LogStats {
   byType: Record<string, number>
   byPath: Record<string, number>
   escalations: { emergency: number; callback: number }
-  bookings: { booked: number; conflict: number }
+  bookings: { booked: number; conflict: number; cancelled: number; rescheduled: number }
   errors: number
   perMinute: { t: string; count: number }[]
 }

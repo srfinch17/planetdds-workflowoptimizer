@@ -27,7 +27,7 @@ export interface LogStats {
   byType: Record<string, number>;
   byPath: Record<string, number>; // intent path on schedule_request events
   escalations: { emergency: number; callback: number };
-  bookings: { booked: number; conflict: number };
+  bookings: { booked: number; conflict: number; cancelled: number; rescheduled: number };
   errors: number;
   perMinute: { t: string; count: number }[]; // schedule_requests bucketed by minute
 }
@@ -126,7 +126,7 @@ export class JsonlEventLog implements EventLog {
     const byType: Record<string, number> = {};
     const byPath: Record<string, number> = {};
     const escalations = { emergency: 0, callback: 0 };
-    const bookings = { booked: 0, conflict: 0 };
+    const bookings = { booked: 0, conflict: 0, cancelled: 0, rescheduled: 0 };
     const perMinuteMap = new Map<string, number>();
     let errors = 0;
 
@@ -141,7 +141,11 @@ export class JsonlEventLog implements EventLog {
         if (e.data.level === "emergency") escalations.emergency += 1;
         else if (e.data.level === "callback") escalations.callback += 1;
       } else if (e.type === "booking") {
+        // Count each outcome on its own — a cancellation or reschedule must NOT
+        // inflate the "booked" tally.
         if (e.data.outcome === "conflict") bookings.conflict += 1;
+        else if (e.data.outcome === "cancelled") bookings.cancelled += 1;
+        else if (e.data.outcome === "rescheduled") bookings.rescheduled += 1;
         else bookings.booked += 1;
       } else if (e.type === "error") {
         errors += 1;
