@@ -14,6 +14,7 @@ const rule = new RuleBasedIntentExtractor();
 
 function llmIntent(): SchedulingIntent {
   return {
+    action: "book",
     appointmentType: "checkup",
     urgency: "routine",
     earliestDate: "2026-06-08",

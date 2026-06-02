@@ -159,6 +159,23 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   request for Dr. Jones.
 - A request marked as extracted by the LLM shows a "🤖 Extracted by Claude" badge.
 
+## Cancel & reschedule
+- The intent carries an **`action`** (`book` | `cancel` | `reschedule`); the same
+  conversational box handles all three ("this is Jane Doe, cancel my appointment").
+- For cancel/reschedule the orchestrator **identifies the patient by name OR phone**
+  (`src/core/patients/lookup.ts` — phone wins, since voice-to-text garbles names not
+  numbers) and lists their upcoming appointments. The action only changes the UI
+  (`ManageAppointments`): a Cancel button with a confirm step, or a Reschedule that
+  reuses `/api/availability` + a `POST /api/reschedule` (books the new slot for the
+  same patient and cancels the old one together). `POST /api/cancel` removes one.
+- Reschedule keeps the same type and prefers the same dentist (falls back to other
+  eligible providers only if that dentist has nothing in the window).
+- Seed realism: the bulk calendar belongs to **anonymous filler patients**; each of
+  the 20 named patients has just 2–3 upcoming appointments, so "cancel my appointment"
+  resolves to a sane list, not hundreds (see `scripts/genAppointments.mjs`).
+- **Known simplification:** name/phone identity is matching, not real verification —
+  fine for a mock, would need auth in production.
+
 ## Admin & availability
 - **Plain-English rule teaching:** an admin types a sentence; the rule parser (chrono
   for dates, with an optional LLM assist) turns it into a structured `AvailabilityRule`.

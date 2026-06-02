@@ -9,6 +9,7 @@ const SEED_DIR = fileURLToPath(new URL("../src/core/data", import.meta.url));
 
 function intent(overrides: Partial<SchedulingIntent>): SchedulingIntent {
   return {
+    action: "book",
     appointmentType: "checkup",
     urgency: "routine",
     earliestDate: null,

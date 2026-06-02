@@ -17,6 +17,7 @@ import {
 } from '../api'
 import { Calendar } from '../components/Calendar'
 import { MonthCalendar } from '../components/MonthCalendar'
+import { ManageAppointments } from '../components/ManageAppointments'
 import { typeIcon } from '../apptIcons'
 import { todayISO, thisMonth, monthsAhead } from '../today'
 
@@ -271,6 +272,17 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
         <>
           <IntentSummary result={result} providerName={providerName} />
 
+          {result.intent.action !== 'book' && result.patientMatch ? (
+            <ManageAppointments
+              action={result.intent.action}
+              patientMatch={result.patientMatch}
+              appointments={result.appointments ?? []}
+              intent={result.intent}
+              today={TODAY}
+              onChanged={loadState}
+            />
+          ) : (
+          <>
           <section className="results">
             <div className="results-head">
               <h3>{result.recommendation.bestEffort ? '🧭 Closest available' : '✨ Recommendations'}</h3>
@@ -354,6 +366,8 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
               />
             </section>
           )}
+          </>
+          )}
         </>
       )}
     </div>
@@ -376,7 +390,9 @@ function IntentSummary({
   const { intent, pathTaken } = result
   const chips: { label: string; tone?: string }[] = []
 
-  chips.push({ label: `urgency: ${intent.urgency}`, tone: intent.urgency === 'urgent' ? 'bad' : undefined })
+  if (intent.action !== 'book') chips.push({ label: `action: ${intent.action}`, tone: 'bad' })
+  if (intent.action === 'book')
+    chips.push({ label: `urgency: ${intent.urgency}`, tone: intent.urgency === 'urgent' ? 'bad' : undefined })
   if (intent.appointmentType) chips.push({ label: `type: ${intent.appointmentType}` })
   if (intent.earliestDate)
     chips.push({

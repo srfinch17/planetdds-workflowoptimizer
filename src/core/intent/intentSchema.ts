@@ -17,6 +17,7 @@ const dateOrNull = z.string().regex(DATE_RE, "expected YYYY-MM-DD").nullable();
  * rather than feeding garbage into the scheduler.
  */
 export const intentSchema = z.object({
+  action: z.enum(["book", "cancel", "reschedule"]),
   appointmentType: z.string().nullable(),
   urgency: z.enum(["routine", "soon", "urgent"]),
   earliestDate: dateOrNull,

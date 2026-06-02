@@ -144,17 +144,39 @@ for (let d = toDate(BASE); iso(d) <= END; d = new Date(d.getTime() + dayMs)) {
         continue;
       }
       seq += 1;
+      pick(patients); // keep the RNG draw so the calendar stays byte-identical;
+                      // the bulk calendar uses anonymous fillers (see below).
       out.push({
         id: `appt-${String(seq).padStart(3, "0")}`,
         providerId: p.id,
         operatoryId: room.id,
-        patientId: pick(patients).id,
+        patientId: `pat-anon-${String(seq).padStart(4, "0")}`,
         start: `${date}T${minToHHmm(startMin)}:00`,
         end: `${date}T${minToHHmm(endMin)}:00`,
         type,
       });
       busy.push({ date, providerId: p.id, operatoryId: room.id, startMin, endMin });
       cursor = endMin; // jump past the appointment we just placed
+    }
+  }
+}
+
+// The bulk calendar above belongs to anonymous fillers, so no single patient
+// owns hundreds. Give each NAMED patient a small, realistic set of UPCOMING
+// appointments by relabeling a spread of generated ones — this only changes who
+// an appointment belongs to, never when/where it is, so the calendar's shape
+// (and every availability test) is unchanged. Now "this is Jane Doe, cancel my
+// appointment" resolves to her 2 appointments, not 200.
+{
+  const future = out.filter(
+    (a) => a.start.slice(0, 10) >= "2026-06-09" && a.id !== "appt-001" && a.id !== "appt-002",
+  );
+  const PER = 2;
+  for (let i = 0; i < patients.length; i++) {
+    for (let k = 0; k < PER; k++) {
+      const n = i * PER + k;
+      const idx = Math.floor((future.length * (n + 1)) / (patients.length * PER + 1));
+      if (future[idx]) future[idx].patientId = patients[i].id;
     }
   }
 }

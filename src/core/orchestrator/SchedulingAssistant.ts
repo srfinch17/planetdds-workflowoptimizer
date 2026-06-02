@@ -1,16 +1,23 @@
 import type { ScheduleStore } from "../store/ScheduleStore";
 import type { IntentExtractor } from "../intent/IntentExtractor";
 import type { ScheduleReasoningAgent } from "../schedule/ScheduleReasoningAgent";
-import type { Recommendation, SchedulingIntent, Escalation } from "../types";
+import type { Recommendation, SchedulingIntent, Escalation, AppointmentSummary, PatientMatch } from "../types";
 import type { ExtractionMode } from "../intent/IntentExtractor";
 import { assessEscalation, type TriageSkill } from "../skills/triage";
+import { identifyPatient, upcomingAppointments } from "../patients/lookup";
 import { toIso } from "../time";
 
 export interface AssistantResult {
   intent: SchedulingIntent;
   recommendation: Recommendation;
   escalation: Escalation; // level "none" unless an emergency was detected
+  // Present only for cancel/reschedule: who we matched (or didn't), and that
+  // patient's upcoming appointments to act on.
+  patientMatch?: PatientMatch;
+  appointments?: AppointmentSummary[];
 }
+
+const EMPTY_RECOMMENDATION: Recommendation = { slots: [], bestEffort: false, preferredProviderId: null };
 
 const NO_ESCALATION: Escalation = {
   level: "none",
@@ -58,8 +65,21 @@ export class SchedulingAssistant {
     // extractor both work through the same call site).
     const intent = await this.extractor.extract(rawRequest, { refDate, store: this.store, mode: opts.mode });
 
-    // Step 2 — rank the bookable slots deterministically. Still computed for an
-    // emergency, so staff can offer the soonest opening on the callback.
+    // Cancel / reschedule both work the same way here: identify the patient (by
+    // name or phone) and list their upcoming appointments. The ACTION only
+    // changes what the UI offers — a Cancel button vs. a Reschedule flow that
+    // reuses the normal availability + booking path. No slots are ranked.
+    if (intent.action === "cancel" || intent.action === "reschedule") {
+      const patient = identifyPatient(intent.patientName, intent.patientPhone, this.store);
+      const patientMatch: PatientMatch = patient
+        ? { found: true, patientId: patient.id, name: patient.name }
+        : { found: false, patientId: null, name: null };
+      const appointments = patient ? upcomingAppointments(patient.id, refDate, this.store) : [];
+      return { intent, recommendation: EMPTY_RECOMMENDATION, escalation, patientMatch, appointments };
+    }
+
+    // Step 2 (book) — rank the bookable slots deterministically. Still computed
+    // for an emergency, so staff can offer the soonest opening on the callback.
     const recommendation = this.reasoningAgent.recommend(intent, this.store, this.topN, { refDate });
 
     return { intent, recommendation, escalation };

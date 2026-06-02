@@ -5,7 +5,10 @@
 export type Urgency = 'routine' | 'soon' | 'urgent'
 export type Weekday = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'
 
+export type SchedulingAction = 'book' | 'cancel' | 'reschedule'
+
 export interface SchedulingIntent {
+  action: SchedulingAction
   appointmentType: string | null
   urgency: Urgency
   earliestDate: string | null
@@ -63,12 +66,30 @@ export interface Escalation {
   matched: string | null
 }
 
+export interface AppointmentSummary {
+  id: string
+  start: string
+  end: string
+  type: string
+  providerId: string
+  providerName: string
+}
+
+export interface PatientMatch {
+  found: boolean
+  patientId: string | null
+  name: string | null
+}
+
 export interface ScheduleResponse {
   intent: SchedulingIntent
   recommendation: Recommendation
   pathTaken: IntentPath
   escalation: Escalation
   requestId: string
+  // Present for cancel/reschedule requests.
+  patientMatch: PatientMatch | null
+  appointments: AppointmentSummary[] | null
 }
 
 export type EventType = 'schedule_request' | 'escalation' | 'booking' | 'rule_added' | 'error'
@@ -285,6 +306,25 @@ export function postBook(
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ slot, patientName: patient.name, patientPhone: patient.phone, requestId }),
+  }).then((r) => jsonOrThrow(r))
+}
+
+export function postCancel(appointmentId: string): Promise<{ ok: boolean; appointments: Appointment[] }> {
+  return fetch('/api/cancel', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ appointmentId }),
+  }).then((r) => jsonOrThrow(r))
+}
+
+export function postReschedule(
+  oldAppointmentId: string,
+  slot: CandidateSlot,
+): Promise<{ appointment: Appointment; cancelledId: string; appointments: Appointment[]; confirmationNumber: string }> {
+  return fetch('/api/reschedule', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ oldAppointmentId, slot }),
   }).then((r) => jsonOrThrow(r))
 }
 

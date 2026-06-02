@@ -140,6 +140,83 @@
   border-color: var(--brand);
   color: var(--brand);
 }
+.btn--danger {
+  background: var(--bad, #c0271a);
+  border-color: var(--bad, #c0271a);
+  color: #fff;
+}
+.btn--danger-outline {
+  background: transparent;
+  border-color: var(--bad, #c0271a);
+  color: var(--bad, #c0271a);
+}
+.btn--danger-outline:not(:disabled):hover {
+  background: var(--bad, #c0271a);
+  color: #fff;
+}
+.btn--ghost {
+  background: transparent;
+}
+
+/* Cancel / reschedule an existing appointment. */
+.manage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.manage__notfound {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.manage__who {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.manage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.manage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.manage-row--done {
+  opacity: 0.7;
+}
+.manage-row__info {
+  font-size: 14px;
+}
+.manage-row__info strong {
+  text-transform: capitalize;
+}
+.manage-row__status {
+  font-weight: 700;
+  color: var(--good);
+  font-size: 13px;
+}
+.manage-row__confirm {
+  display: flex;
+  gap: 8px;
+}
+.reschedule-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
 
 .banner {
   background: var(--surface);

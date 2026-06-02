@@ -42,6 +42,13 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect(intent.appointmentType).not.toBe("emergency");
   });
 
+  it("classifies the action: cancel / reschedule / book", () => {
+    expect(extractor.extract("This is Jane Doe, please cancel my appointment", ctx).action).toBe("cancel");
+    expect(extractor.extract("I need to reschedule my appointment to next Tuesday", ctx).action).toBe("reschedule");
+    expect(extractor.extract("change my appointment to Friday morning", ctx).action).toBe("reschedule");
+    expect(extractor.extract("I need a cleaning next Thursday", ctx).action).toBe("book");
+  });
+
   it("pulls the patient's name and phone from the request when they state them", () => {
     const intent = extractor.extract(
       "This is Frank Jones, phone number 222-333-4455, I have a toothache how soon can you get me in?",

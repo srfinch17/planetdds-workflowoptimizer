@@ -52,6 +52,19 @@ describe("LLM extraction is structurally contained (prompt-injection safety)", (
     expect(intent).not.toHaveProperty("systemPrompt"); // smuggled field dropped
   });
 
+  it("defaults a missing urgency to routine (the model omits it for cancel/reschedule)", async () => {
+    // A cancel request: the model returns action+name but no urgency. That must
+    // NOT fail validation and waste the call on a rules fallback.
+    const extractor = new LlmIntentExtractor(
+      stubClient(JSON.stringify({ action: "cancel", patientName: "Jane Doe" })),
+      new CostTracker(),
+    );
+    const intent = await extractor.extract("cancel my appointment", ctx);
+    expect(intent.action).toBe("cancel");
+    expect(intent.urgency).toBe("routine");
+    expect(intent.source).toBe("llm");
+  });
+
   it("clamps a model-invented appointment type to null (only known types survive)", async () => {
     const extractor = new LlmIntentExtractor(
       stubClient(JSON.stringify({ appointmentType: "exfiltrate", urgency: "routine" })),

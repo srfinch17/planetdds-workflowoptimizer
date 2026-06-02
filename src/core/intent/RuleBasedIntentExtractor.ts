@@ -1,6 +1,6 @@
 import * as chrono from "chrono-node";
 import type { ScheduleStore } from "../store/ScheduleStore";
-import type { SchedulingIntent, Urgency, Weekday } from "../types";
+import type { SchedulingAction, SchedulingIntent, Urgency, Weekday } from "../types";
 import type { IntentContext, IntentExtractor } from "./IntentExtractor";
 import { weekdayOf } from "../time";
 import { classifyUrgency, type TriageSkill } from "../skills/triage";
@@ -33,6 +33,8 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
   extract(request: string, ctx: IntentContext): SchedulingIntent {
     const text = request.toLowerCase();
 
+    const action = parseAction(text);
+
     const { earliestDate, latestDate, daysOfWeek, dateResolved } = this.parseDates(request, ctx);
     const { timeEarliest, timeLatest, partOfDay, timeResolved } = parseTimeWindow(text);
     const appointmentType = parseType(text);
@@ -61,6 +63,7 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
     const confidence = clamp(0.3 + 0.18 * signals, 0, 0.95);
 
     return {
+      action,
       appointmentType,
       urgency,
       earliestDate,
@@ -181,6 +184,18 @@ function toHHmm(hourTok: string, minTok: string | undefined, ampm: string | unde
 }
 
 // --- keyword tables ---
+
+/**
+ * Classify what the patient wants to DO. Cancel is checked first (most specific
+ * and destructive); "change/move/switch" count as reschedule only when they're
+ * clearly about an appointment, so "change to a cleaning" stays a normal booking.
+ */
+function parseAction(text: string): SchedulingAction {
+  if (/\bcancel(l?ed|l?ing|lation)?\b/.test(text)) return "cancel";
+  if (/\b(reschedul|re-?schedul|move|push|switch|rebook)/.test(text)) return "reschedule";
+  if (/\bchange\b/.test(text) && /\b(appointment|appt|booking|visit)\b/.test(text)) return "reschedule";
+  return "book";
+}
 
 /**
  * Pull the patient's own name + phone out of the request when they volunteer it

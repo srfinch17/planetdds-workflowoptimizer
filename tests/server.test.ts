@@ -120,6 +120,49 @@ describe("Hono backend API", () => {
     expect(Object.keys(body.slotsByDay).length).toBeGreaterThan(0);
   });
 
+  it("POST /api/cancel removes an appointment", async () => {
+    const state = (await (await app.request("/api/state")).json()) as any;
+    const target = state.appointments.find((a: any) => a.start.slice(0, 10) >= "2026-06-09");
+    const before = state.appointments.length;
+    const res = await app.request("/api/cancel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ appointmentId: target.id }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.ok).toBe(true);
+    expect(body.appointments.length).toBe(before - 1);
+    expect(body.appointments.find((a: any) => a.id === target.id)).toBeUndefined();
+  });
+
+  it("POST /api/cancel 404s on an unknown appointment", async () => {
+    const res = await app.request("/api/cancel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ appointmentId: "appt-does-not-exist" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("POST /api/reschedule books a new slot for the same patient and cancels the old", async () => {
+    const state = (await (await app.request("/api/state")).json()) as any;
+    const old = state.appointments.find((a: any) => a.type === "cleaning" && a.start.slice(0, 10) >= "2026-06-09");
+    const avail = (await (await app.request("/api/availability?from=2026-06-04&to=2026-06-04&type=cleaning")).json()) as any;
+    const slot = avail.slotsByDay["2026-06-04"][0];
+    const res = await app.request("/api/reschedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ oldAppointmentId: old.id, slot }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.confirmationNumber).toMatch(/^DDS-/);
+    expect(body.appointment.patientId).toBe(old.patientId); // same patient
+    expect(body.appointments.find((a: any) => a.id === old.id)).toBeUndefined(); // old gone
+    expect(body.appointments.find((a: any) => a.id === body.appointment.id)).toBeTruthy(); // new there
+  });
+
   it("POST /api/reset returns the metrics dashboard to a clean slate", async () => {
     await app.request("/api/schedule", {
       method: "POST",

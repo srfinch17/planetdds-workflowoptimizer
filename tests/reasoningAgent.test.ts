@@ -9,6 +9,7 @@ const store = new JsonScheduleStore(SEED_DIR, { persist: false });
 
 function intent(overrides: Partial<SchedulingIntent>): SchedulingIntent {
   return {
+    action: "book",
     appointmentType: "checkup",
     urgency: "routine",
     earliestDate: "2026-06-04",

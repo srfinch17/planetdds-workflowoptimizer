@@ -54,9 +54,16 @@ export class LlmIntentExtractor implements IntentExtractor {
     const rawType: unknown = (raw as Record<string, unknown>)["appointmentType"];
     const appointmentType = typeof rawType === "string" && knownTypes.has(rawType) ? rawType : null;
 
+    const rawAction: unknown = (raw as Record<string, unknown>)["action"];
+    const action = rawAction === "cancel" || rawAction === "reschedule" ? rawAction : "book";
+
     const candidate: SchedulingIntent = {
+      action,
       appointmentType,
-      urgency: (raw as any).urgency,
+      // Default a missing urgency to "routine" — the model legitimately omits it
+      // for non-booking actions (you don't rank a cancel by urgency), and a
+      // missing value would otherwise fail Zod and waste the call on a fallback.
+      urgency: (raw as any).urgency ?? "routine",
       earliestDate: (raw as any).earliestDate ?? null,
       latestDate: (raw as any).latestDate ?? null,
       daysOfWeek: (raw as any).daysOfWeek ?? [],
@@ -95,6 +102,9 @@ function buildSystemPrompt(store: ScheduleStore): string {
     providers,
     "",
     "JSON fields (use null when not stated):",
+    '- action: "cancel" if they want to cancel an existing appointment, "reschedule"',
+    '    if they want to move/change one, otherwise "book". For "reschedule", the date',
+    "    and time fields below describe the NEW time they want (not the old one).",
     '- appointmentType: one of "cleaning","checkup","filling","extraction","emergency", or null',
     '- urgency: "routine" | "soon" | "urgent"',
     "- earliestDate: \"YYYY-MM-DD\" or null",

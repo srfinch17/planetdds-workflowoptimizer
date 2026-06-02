@@ -3,6 +3,7 @@ import { parseIntent } from "../src/core/intent/intentSchema";
 import type { SchedulingIntent } from "../src/core/types";
 
 const valid: SchedulingIntent = {
+  action: "book",
   appointmentType: "checkup",
   urgency: "routine",
   earliestDate: "2026-06-04",

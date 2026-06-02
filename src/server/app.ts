@@ -78,7 +78,10 @@ export function createApp(deps: AppDeps): Hono {
     const costBefore = costTracker.usd;
     const callsBefore = costTracker.totals.calls;
     const t0 = performance.now();
-    const { intent, recommendation, escalation } = await assistant.handle(request, { refDate, mode });
+    const { intent, recommendation, escalation, patientMatch, appointments } = await assistant.handle(request, {
+      refDate,
+      mode,
+    });
     const latencyMs = Math.round((performance.now() - t0) * 10) / 10;
     latency.record(latencyMs);
 
@@ -123,7 +126,16 @@ export function createApp(deps: AppDeps): Hono {
     }
 
     // tiered.lastPath was just set by this exact call — surfaces the cost story.
-    return c.json({ intent, recommendation, pathTaken: tiered.lastPath, escalation, requestId: scheduleEvent.id });
+    return c.json({
+      intent,
+      recommendation,
+      pathTaken: tiered.lastPath,
+      escalation,
+      requestId: scheduleEvent.id,
+      // Present for cancel/reschedule: who we matched + their upcoming appointments.
+      patientMatch: patientMatch ?? null,
+      appointments: appointments ?? null,
+    });
   });
 
   // The staff callback queue (newest first) — the office's emergency worklist.
@@ -147,6 +159,7 @@ export function createApp(deps: AppDeps): Hono {
       .filter(Boolean) as Weekday[];
 
     const intent: SchedulingIntent = {
+      action: "book",
       appointmentType: type,
       urgency: "routine",
       earliestDate: from,
@@ -266,6 +279,63 @@ export function createApp(deps: AppDeps): Hono {
       correlationId,
     );
     return c.json({ appointment, appointments: store.getAppointments(), confirmationNumber });
+  });
+
+  // Cancel an existing appointment. Destructive, so the UI only calls this after
+  // an explicit confirm. Returns the cancelled appointment + the fresh list.
+  app.post("/api/cancel", async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const appointmentId = typeof body.appointmentId === "string" ? body.appointmentId : "";
+    if (!appointmentId) return c.json({ error: "appointmentId is required" }, 400);
+    const cancelled = store.cancelAppointment(appointmentId);
+    if (!cancelled) return c.json({ error: "That appointment no longer exists." }, 404);
+    eventLog.record("booking", {
+      outcome: "cancelled",
+      appointmentId: cancelled.id,
+      providerId: cancelled.providerId,
+      start: cancelled.start,
+      patientId: cancelled.patientId,
+    });
+    return c.json({ ok: true, cancelled, appointments: store.getAppointments() });
+  });
+
+  // Reschedule = book the new slot for the SAME patient, then cancel the old one
+  // — done together so a patient is never left double-booked or with neither.
+  app.post("/api/reschedule", async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const oldAppointmentId = typeof body.oldAppointmentId === "string" ? body.oldAppointmentId : "";
+    const slot = body.slot as CandidateSlot | undefined;
+    if (!oldAppointmentId || !slot || !slot.providerId || !slot.start || !slot.end) {
+      return c.json({ error: "oldAppointmentId and a slot (with start/end) are required" }, 400);
+    }
+    const old = store.getAppointments().find((a) => a.id === oldAppointmentId);
+    if (!old) return c.json({ error: "That appointment no longer exists." }, 404);
+
+    // Guard the new slot against a fresh conflict (time passed since the search).
+    const conflict = store.getAppointments().some(
+      (a) =>
+        a.id !== oldAppointmentId &&
+        (a.providerId === slot.providerId || a.operatoryId === slot.operatoryId) &&
+        overlaps(slot.start, slot.end, a.start, a.end),
+    );
+    if (conflict) return c.json({ error: "That new time was just taken — please pick another." }, 409);
+
+    const appointment = store.book(slot, old.patientId);
+    store.cancelAppointment(oldAppointmentId);
+    const confirmationNumber = `DDS-${appointment.id.replace(/\D/g, "")}-${Math.random()
+      .toString(36)
+      .slice(2, 6)
+      .toUpperCase()}`;
+    eventLog.record("booking", {
+      outcome: "rescheduled",
+      from: oldAppointmentId,
+      appointmentId: appointment.id,
+      providerId: appointment.providerId,
+      start: appointment.start,
+      patientId: old.patientId,
+      confirmationNumber,
+    });
+    return c.json({ appointment, cancelledId: oldAppointmentId, appointments: store.getAppointments(), confirmationNumber });
   });
 
   // Plain-English rule teaching. The parser translates the sentence into a

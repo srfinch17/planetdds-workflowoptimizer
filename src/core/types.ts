@@ -4,6 +4,9 @@
 export type Urgency = "routine" | "soon" | "urgent";
 export type Weekday = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 export type ProviderRole = "dentist" | "hygienist";
+// What the patient wants to DO. "book" is a new appointment (the default);
+// "cancel" and "reschedule" act on one they already have.
+export type SchedulingAction = "book" | "cancel" | "reschedule";
 
 export interface Provider {
   id: string;
@@ -73,6 +76,7 @@ export interface AvailabilityRule {
 
 // The structured output of the Intent Agent.
 export interface SchedulingIntent {
+  action: SchedulingAction; // book (default) | cancel | reschedule
   appointmentType: string | null;
   urgency: Urgency;
   earliestDate: string | null; // ISO date "YYYY-MM-DD"
@@ -131,6 +135,25 @@ export interface Recommendation {
   // When the patient named a provider, this echoes it so the UI can group the
   // results into "your dentist" (matching slots, listed first) vs alternatives.
   preferredProviderId?: string | null;
+}
+
+// --- Manage existing appointments (cancel / reschedule) ---
+
+// One of the patient's existing appointments, enriched for display.
+export interface AppointmentSummary {
+  id: string;
+  start: string; // ISO local
+  end: string;
+  type: string;
+  providerId: string;
+  providerName: string;
+}
+
+// The result of looking a patient up by name or phone for a cancel/reschedule.
+export interface PatientMatch {
+  found: boolean;
+  patientId: string | null;
+  name: string | null; // the matched patient's name (echo back for confirmation)
 }
 
 // --- Emergency escalation ---
