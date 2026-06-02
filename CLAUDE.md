@@ -36,6 +36,10 @@ consistent and explainable. Mock data is JSON.
    data** enforced deterministically; the LLM only *translates* an admin's English
    sentence into a rule. A real Anthropic **Agent Skill** (dental-triage) supplies
    **fuzzy clinical judgment** (urgency + emergency escalation), never hard rules.
+   Clinical eligibility is data too (`appointmentTypes.json`): each type declares
+   the `eligibleRoles` / `requiredSpecialty` / `requiredEquipment` it needs, so a
+   hygienist never surfaces for an extraction and an extraction only books into an
+   X-ray-equipped operatory — enforced in the candidate generator, not hardcoded.
 3. **Offline mode:** the rule-based parser IS the offline path (graceful
    degradation via the Tiered extractor). `chrono-node` does deterministic date parsing.
 
@@ -44,10 +48,20 @@ consistent and explainable. Mock data is JSON.
   workflow because steps are fixed — autonomy is reserved for where it's needed.
 - **Consistent:** ranking is deterministic code → identical output for identical input.
 - **Trustworthy LLM output:** every LLM response is validated against a Zod schema;
-  failure → deterministic fallback.
+  failure → deterministic fallback. The model returns a provider *name* (never an
+  id), `appointmentType` is clamped to a known type or null, and `source`/
+  `confidence` are server-set — so a prompt-injected model is **structurally
+  contained**: it can only ever produce a bounded `SchedulingIntent`, never free
+  text or smuggled fields. Covered by `tests/llmSafety.test.ts`.
 - **Explainable:** explanations are generated FROM the scoring factors → always faithful.
 - **Emergency safety:** a request that reads as a medical emergency escalates
   *before* scheduling and forces a staff callback — deterministic, works offline.
+- **Measured, not asserted:** `npm run eval` scores the deterministic extractor
+  against a labeled set (`src/eval/cases.json`) and reports field-level accuracy —
+  a regression guard for parsing, and an honest picture of where the LLM tier earns
+  its keep (multi-day phrasings like "Wednesday or Thursday" are exactly the tail).
+- **Bilingual:** with a key, a Spanish request ("una limpieza el próximo jueves por
+  la mañana") extracts correctly — relevant for a real practice's patient base.
 
 ## Tech stack
 TypeScript, Node, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku),
@@ -65,6 +79,7 @@ TypeScript, Node, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku),
   `app.request()`), `index.ts` (reads `.env`, wires deps, serves on :3000),
   `metrics.ts`.
 - `src/cli/` — `index.ts` (one-shot CLI), `scenarios.ts` (example runs).
+- `src/eval/` — `runEval.ts` + `cases.json`: labeled extraction-accuracy harness.
 - `web/` — React + Vite app; `vite.config.ts` proxies `/api` → :3000.
 - `tests/` — Vitest suite. `docs/` — implementation plan. `API.md` — HTTP reference.
 
@@ -73,6 +88,7 @@ TypeScript, Node, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku),
 npm install
 npm run cli -- "Can I come in next Thursday after 3?"   # anchors to today; add --ref=YYYY-MM-DD to pin
 npm run scenarios     # four example runs (happy / ambiguous / urgent / emergency)
+npm run eval          # intent-extraction accuracy on a labeled set (offline, $0)
 npm test              # full suite
 npm run typecheck     # tsc --noEmit
 ```
@@ -147,16 +163,18 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   the candidate generator indexes appointments by day to stay fast against a full year.
 
 ## Current status
-**Feature-complete.** 105 tests passing, `npm run typecheck` clean, web build clean.
+**Feature-complete.** 112 tests passing, `npm run typecheck` clean, web build clean.
 Implemented: CLI core; Zod validation; tiered/offline intent + a per-request engine-mode
 switch (agentic / mixed / rules); Hono backend; React UI (three tabs — intake + month +
-day calendars + admin + metrics — with theming and custom dropdowns); provider-preference
+day calendars + admin + metrics — with theming, custom dropdowns, per-dentist color-coding,
+and per-type icons); provider-preference
 grouping; booking with patient name/phone + confirmation numbers; cost/efficiency metrics;
 plain-English rule teaching with add/remove workdays + office-wide closures + a reschedule
 queue + view/delete/reset; dental-triage Agent Skill; emergency escalation with a staff
-callback queue; data-driven provider eligibility (role + required specialty per
-appointment type, so a hygienist never surfaces for an extraction/emergency);
-a year of mock scheduling data with type-driven durations; and an
+callback queue; data-driven clinical eligibility (role + specialty + operatory equipment per
+appointment type, so a hygienist never surfaces for an extraction and imaging procedures
+only book into X-ray rooms); prompt-injection containment + an offline extraction-accuracy
+eval (`npm run eval`); a year of mock scheduling data with type-driven durations; and an
 append-only event log (`EventLog` port) surfaced as an observability API (`/api/logs`,
 stats, replay, export, reset) with a Metrics activity panel.
 
