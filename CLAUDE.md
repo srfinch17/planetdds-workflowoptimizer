@@ -101,33 +101,58 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
    911 directive + immediate staff callback (overrides normal scheduling).
 
 ## UI
-- React + Vite. **Light / Dark / System** theme dropdown (header). Design system is
-  fully token-driven (`web/src/index.css`): IBM Plex Mono for data/labels, IBM Plex
-  Sans for prose; neon-green primary accent, violet secondary, per-dentist colors
-  (Smith green · Pana violet · Jones amber).
+- React + Vite, **three tabs: Patient Intake / Admin / Metrics**. Admin is operational
+  (calendar, rule teaching, queues, reset); Metrics is the cost/efficiency dashboard +
+  activity log.
+- Design system is fully token-driven (`web/src/index.css`): IBM Plex Mono for
+  data/labels, IBM Plex Sans for prose; neon-green primary accent, violet secondary,
+  per-dentist colors (Smith green · Pana violet · Jones amber).
+- **Header controls** use a shared custom `Dropdown` (`web/src/components/Dropdown.tsx`),
+  not native `<select>`. The header's glowing dot is the live **engine-mode indicator +
+  control** (`ModeIndicator`): agentic (always LLM, violet dot) / mixed (rules-first,
+  green) / rules only (never LLM, amber). It sets each request's extraction mode; the
+  "agentic" option is disabled when no API key is configured. Plus a **Light/Dark/System**
+  theme dropdown.
 - **Month-view calendar** (`web/src/components/MonthCalendar.tsx`): navigable ~12
   months, appointments as per-dentist color chips, click a day → day-detail grid.
   On Intake it auto-jumps to the recommendation month and rings the recommended day.
 - Booking is request-driven: recommendations render as cards + clickable ★ slots on
   the day grid (booked time shows rose/red, "taken"; open slots green, "book").
+  **Booking captures patient name + phone and returns a confirmation number** (DDS-####-XXXX).
+- A request marked as extracted by the LLM shows a "🤖 Extracted by Claude" badge.
+
+## Admin & availability
+- **Plain-English rule teaching:** an admin types a sentence; the rule parser (chrono
+  for dates, with an optional LLM assist) turns it into a structured `AvailabilityRule`.
+- **Availability engine** (`src/core/schedule/availability.ts`): a provider's base
+  workdays/hours can be modified by rules that ADD a workday (`workday`) or REMOVE one
+  (`dayoff`); the latest rule wins (newest `createdAt`). `block` carves out a daily
+  window (e.g. lunch). A contradicting rule returns 409 so the caller can confirm an override.
+- **Office-wide closures** (`closure`, providerId `office`, a `startDate`/`endDate`
+  range) override all providers; teaching one cancels every appointment in the window
+  and moves them to a **"needs rescheduling" queue** (`/api/state.reschedule`).
+- Admin can **view and delete rules** (with timestamps + a "superseded" badge) and
+  **reset to default** (`POST /api/reset` re-seeds the store and clears logs/queues).
 
 ## Data
 - `src/core/data/*.json` are the mock store. `appointments.json` holds ~a year of
-  seeded appointments generated deterministically by `scripts/genAppointments.mjs`
-  (re-run with `node scripts/genAppointments.mjs`). It preserves the canonical
-  example days (2026-06-04 + the following week) so those scenarios stay valid.
+  seeded appointments (~4,400) generated deterministically by `scripts/genAppointments.mjs`
+  (re-run with `node scripts/genAppointments.mjs`). It keeps the canonical example day
+  **2026-06-04** lightly loaded so the open-slot scenarios stay valid.
 - Appointment durations are type-driven (cleaning 30m, filling 60m, extraction 90m);
   the candidate generator indexes appointments by day to stay fast against a full year.
 
 ## Current status
-**Feature-complete.** ~95 tests passing, `npm run typecheck` clean, web build clean.
-Implemented: CLI core; Zod validation; tiered/offline intent; Hono backend; React
-UI (intake + month + day calendars + admin dashboard + theming); provider-preference
-grouping; cost/efficiency metrics; plain-English rule teaching; dental-triage Agent
-Skill; emergency escalation with a staff callback queue; a year of mock scheduling
-data with type-driven durations; and an append-only event log (`EventLog` port)
-surfaced as an observability API (`/api/logs`, stats, replay, export, reset) with an
-Admin activity panel.
+**Feature-complete.** 100 tests passing, `npm run typecheck` clean, web build clean.
+Implemented: CLI core; Zod validation; tiered/offline intent + a per-request engine-mode
+switch (agentic / mixed / rules); Hono backend; React UI (three tabs — intake + month +
+day calendars + admin + metrics — with theming and custom dropdowns); provider-preference
+grouping; booking with patient name/phone + confirmation numbers; cost/efficiency metrics;
+plain-English rule teaching with add/remove workdays + office-wide closures + a reschedule
+queue + view/delete/reset; dental-triage Agent Skill; emergency escalation with a staff
+callback queue; a year of mock scheduling data with type-driven durations; and an
+append-only event log (`EventLog` port) surfaced as an observability API (`/api/logs`,
+stats, replay, export, reset) with a Metrics activity panel.
 
 ## Known simplifications (intentional)
 - `candidateGenerator` does not yet filter provider role/specialty vs. appointment
