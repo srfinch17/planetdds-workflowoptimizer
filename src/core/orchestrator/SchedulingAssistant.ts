@@ -30,9 +30,11 @@ const NO_ESCALATION: Escalation = {
 /**
  * The orchestrator (orchestrator-workers pattern).
  *
- * This is a deterministic WORKFLOW, not an agent: the control flow never
- * branches on model output — it always does the same two steps in the same
- * order. It coordinates two specialists:
+ * This is a deterministic WORKFLOW, not an agent. It DOES dispatch on the
+ * extracted `action` (book / cancel / reschedule), but only on a value that has
+ * already been validated against a fixed enum at the Zod boundary — so the
+ * branch is finite and predictable, never free-form control flow handed to the
+ * model. Within each branch the steps are fixed. It coordinates two specialists:
  *   1. an IntentExtractor (rules, LLM, or tiered) → WHAT the patient wants
  *   2. the ScheduleReasoningAgent (pure)          → which slots best fit, and why
  * Keeping orchestration dumb and deterministic is what makes the system's

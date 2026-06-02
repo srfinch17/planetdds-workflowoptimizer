@@ -66,7 +66,7 @@ export function ManageAppointments({
   async function cancel(id: string) {
     setError(null)
     try {
-      await postCancel(id)
+      await postCancel(id, patientMatch.patientId ?? '')
       setDone((m) => ({ ...m, [id]: { kind: 'cancelled' } }))
       setConfirmingId(null)
       onChanged()
@@ -102,7 +102,7 @@ export function ManageAppointments({
   async function doReschedule(oldId: string, slot: CandidateSlot) {
     setError(null)
     try {
-      const r = await postReschedule(oldId, slot)
+      const r = await postReschedule(oldId, slot, patientMatch.patientId ?? '')
       setDone((m) => ({ ...m, [oldId]: { kind: 'rescheduled', confirmation: r.confirmationNumber } }))
       setReschedulingId(null)
       onChanged()

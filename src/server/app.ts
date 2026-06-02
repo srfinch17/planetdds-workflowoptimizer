@@ -286,7 +286,17 @@ export function createApp(deps: AppDeps): Hono {
   app.post("/api/cancel", async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const appointmentId = typeof body.appointmentId === "string" ? body.appointmentId : "";
-    if (!appointmentId) return c.json({ error: "appointmentId is required" }, 400);
+    const patientId = typeof body.patientId === "string" ? body.patientId : "";
+    if (!appointmentId || !patientId) return c.json({ error: "appointmentId and patientId are required" }, 400);
+    const appt = store.getAppointments().find((a) => a.id === appointmentId);
+    if (!appt) return c.json({ error: "That appointment no longer exists." }, 404);
+    // Ownership: you can only cancel YOUR OWN appointment — so a guessed id can't
+    // wipe a stranger's slot. This is defense-in-depth, not real auth: a
+    // production system would scope mutations to the AUTHENTICATED patient, not a
+    // client-supplied id (see CLAUDE.md "Security note").
+    if (appt.patientId !== patientId) {
+      return c.json({ error: "That appointment is not under this patient." }, 403);
+    }
     const cancelled = store.cancelAppointment(appointmentId);
     if (!cancelled) return c.json({ error: "That appointment no longer exists." }, 404);
     eventLog.record("booking", {
@@ -304,12 +314,17 @@ export function createApp(deps: AppDeps): Hono {
   app.post("/api/reschedule", async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const oldAppointmentId = typeof body.oldAppointmentId === "string" ? body.oldAppointmentId : "";
+    const patientId = typeof body.patientId === "string" ? body.patientId : "";
     const slot = body.slot as CandidateSlot | undefined;
-    if (!oldAppointmentId || !slot || !slot.providerId || !slot.start || !slot.end) {
-      return c.json({ error: "oldAppointmentId and a slot (with start/end) are required" }, 400);
+    if (!oldAppointmentId || !patientId || !slot || !slot.providerId || !slot.start || !slot.end) {
+      return c.json({ error: "oldAppointmentId, patientId and a slot (with start/end) are required" }, 400);
     }
     const old = store.getAppointments().find((a) => a.id === oldAppointmentId);
     if (!old) return c.json({ error: "That appointment no longer exists." }, 404);
+    // Ownership — same boundary as cancel (see CLAUDE.md "Security note").
+    if (old.patientId !== patientId) {
+      return c.json({ error: "That appointment is not under this patient." }, 403);
+    }
 
     // Guard the new slot against a fresh conflict (time passed since the search).
     const conflict = store.getAppointments().some(

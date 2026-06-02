@@ -78,5 +78,25 @@
     "request": "either Wednesday or Thursday next week with Dr. Pana, mornings",
     "refDate": "2026-06-01",
     "expect": { "daysOfWeek": ["Wed", "Thu"], "preferredProviderId": "prov-pana", "partOfDay": "morning" }
+  },
+  {
+    "request": "This is Jane Doe, please cancel my appointment",
+    "refDate": "2026-06-01",
+    "expect": { "action": "cancel" }
+  },
+  {
+    "request": "I need to reschedule my appointment to next Tuesday",
+    "refDate": "2026-06-01",
+    "expect": { "action": "reschedule", "daysOfWeek": ["Tue"] }
+  },
+  {
+    "request": "can I move my cleaning appointment to Friday morning",
+    "refDate": "2026-06-01",
+    "expect": { "action": "reschedule", "appointmentType": "cleaning", "daysOfWeek": ["Fri"], "partOfDay": "morning" }
+  },
+  {
+    "request": "I'd like to book a filling next Thursday",
+    "refDate": "2026-06-01",
+    "expect": { "action": "book", "appointmentType": "filling", "daysOfWeek": ["Thu"] }
   }
 ]

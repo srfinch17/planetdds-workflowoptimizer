@@ -17,8 +17,10 @@ consistent and explainable. Mock data is JSON.
 ## Architecture
 
 **Orchestrator–workers pattern** (per Anthropic's "Building Effective Agents"):
-- **SchedulingAssistant** = deterministic orchestrator (a workflow, fixed path —
-  not an LLM, because control flow never branches).
+- **SchedulingAssistant** = deterministic orchestrator (a workflow, not an LLM).
+  It dispatches on the extracted `action` (book/cancel/reschedule), but only on a
+  value already validated against a fixed enum — a finite, predictable branch, not
+  free-form control flow handed to the model. Steps within each branch are fixed.
 - **Intent Agent** = LLM-backed (cheap Haiku) with a **deterministic rule-based
   fallback** for cost control and offline operation.
 - **Schedule-Reasoning Agent** = fully deterministic constraint eval + weighted scoring.
@@ -172,9 +174,16 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   eligible providers only if that dentist has nothing in the window).
 - Seed realism: the bulk calendar belongs to **anonymous filler patients**; each of
   the 20 named patients has just 2–3 upcoming appointments, so "cancel my appointment"
-  resolves to a sane list, not hundreds (see `scripts/genAppointments.mjs`).
-- **Known simplification:** name/phone identity is matching, not real verification —
-  fine for a mock, would need auth in production.
+  resolves to a sane list, not hundreds. The generator also **relabels any clinically
+  impossible seed appointment** (a hygienist filling, a non-specialist extraction) to
+  an eligible type while keeping the slot, so the calendar is consistent with the same
+  eligibility rules new bookings obey (`scripts/genAppointments.mjs`).
+- **Security note (deliberate boundary):** `/api/cancel` and `/api/reschedule` verify
+  the appointment belongs to the supplied `patientId` (so a guessed id can't wipe a
+  stranger's slot) — but that's defense-in-depth, **not auth**. There's no session, so
+  a caller could still supply another patient's id. Production answer: scope mutations
+  to the AUTHENTICATED patient. Identity itself is name/phone *matching*, not
+  verification — fine for a mock, would need real auth + (PHI) access control in prod.
 
 ## Admin & availability
 - **Plain-English rule teaching:** an admin types a sentence; the rule parser (chrono

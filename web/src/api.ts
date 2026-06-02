@@ -309,22 +309,26 @@ export function postBook(
   }).then((r) => jsonOrThrow(r))
 }
 
-export function postCancel(appointmentId: string): Promise<{ ok: boolean; appointments: Appointment[] }> {
+export function postCancel(
+  appointmentId: string,
+  patientId: string,
+): Promise<{ ok: boolean; appointments: Appointment[] }> {
   return fetch('/api/cancel', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ appointmentId }),
+    body: JSON.stringify({ appointmentId, patientId }),
   }).then((r) => jsonOrThrow(r))
 }
 
 export function postReschedule(
   oldAppointmentId: string,
   slot: CandidateSlot,
+  patientId: string,
 ): Promise<{ appointment: Appointment; cancelledId: string; appointments: Appointment[]; confirmationNumber: string }> {
   return fetch('/api/reschedule', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ oldAppointmentId, slot }),
+    body: JSON.stringify({ oldAppointmentId, slot, patientId }),
   }).then((r) => jsonOrThrow(r))
 }
 

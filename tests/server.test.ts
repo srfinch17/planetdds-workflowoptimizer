@@ -120,14 +120,14 @@ describe("Hono backend API", () => {
     expect(Object.keys(body.slotsByDay).length).toBeGreaterThan(0);
   });
 
-  it("POST /api/cancel removes an appointment", async () => {
+  it("POST /api/cancel removes an appointment (when the patient owns it)", async () => {
     const state = (await (await app.request("/api/state")).json()) as any;
     const target = state.appointments.find((a: any) => a.start.slice(0, 10) >= "2026-06-09");
     const before = state.appointments.length;
     const res = await app.request("/api/cancel", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ appointmentId: target.id }),
+      body: JSON.stringify({ appointmentId: target.id, patientId: target.patientId }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
@@ -136,11 +136,25 @@ describe("Hono backend API", () => {
     expect(body.appointments.find((a: any) => a.id === target.id)).toBeUndefined();
   });
 
+  it("POST /api/cancel REJECTS cancelling another patient's appointment (403)", async () => {
+    const state = (await (await app.request("/api/state")).json()) as any;
+    const target = state.appointments.find((a: any) => a.start.slice(0, 10) >= "2026-06-09");
+    const res = await app.request("/api/cancel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ appointmentId: target.id, patientId: "pat-someone-else" }),
+    });
+    expect(res.status).toBe(403);
+    // ...and it was NOT cancelled.
+    const after = (await (await app.request("/api/state")).json()) as any;
+    expect(after.appointments.find((a: any) => a.id === target.id)).toBeTruthy();
+  });
+
   it("POST /api/cancel 404s on an unknown appointment", async () => {
     const res = await app.request("/api/cancel", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ appointmentId: "appt-does-not-exist" }),
+      body: JSON.stringify({ appointmentId: "appt-does-not-exist", patientId: "pat-doe" }),
     });
     expect(res.status).toBe(404);
   });
@@ -153,7 +167,7 @@ describe("Hono backend API", () => {
     const res = await app.request("/api/reschedule", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ oldAppointmentId: old.id, slot }),
+      body: JSON.stringify({ oldAppointmentId: old.id, slot, patientId: old.patientId }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
@@ -161,6 +175,19 @@ describe("Hono backend API", () => {
     expect(body.appointment.patientId).toBe(old.patientId); // same patient
     expect(body.appointments.find((a: any) => a.id === old.id)).toBeUndefined(); // old gone
     expect(body.appointments.find((a: any) => a.id === body.appointment.id)).toBeTruthy(); // new there
+  });
+
+  it("POST /api/reschedule REJECTS moving another patient's appointment (403)", async () => {
+    const state = (await (await app.request("/api/state")).json()) as any;
+    const old = state.appointments.find((a: any) => a.type === "cleaning" && a.start.slice(0, 10) >= "2026-06-09");
+    const avail = (await (await app.request("/api/availability?from=2026-06-04&to=2026-06-04&type=cleaning")).json()) as any;
+    const slot = avail.slotsByDay["2026-06-04"][0];
+    const res = await app.request("/api/reschedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ oldAppointmentId: old.id, slot, patientId: "pat-someone-else" }),
+    });
+    expect(res.status).toBe(403);
   });
 
   it("POST /api/reset returns the metrics dashboard to a clean slate", async () => {

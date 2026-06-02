@@ -181,5 +181,28 @@ for (let d = toDate(BASE); iso(d) <= END; d = new Date(d.getTime() + dayMs)) {
   }
 }
 
+// Clinical integrity: a provider can only perform types their role + specialty
+// allow (a hygienist doesn't do fillings; only a dentist with the extraction
+// specialty extracts). The bulk loop placed appointments by time without
+// checking this, so relabel any ineligible type to one the provider CAN do —
+// KEEPING the slot (start/end/provider/room) exactly, so occupancy and every
+// availability test are unchanged. Net effect: Dr. Jones (hygienist) shows only
+// cleanings/checkups, extractions only appear with Dr. Smith.
+{
+  const T = Object.fromEntries(types.map((t) => [t.type, t]));
+  const P = Object.fromEntries(providers.map((p) => [p.id, p]));
+  const eligible = (t, p) =>
+    (!t.eligibleRoles || t.eligibleRoles.includes(p.role)) &&
+    (!t.requiredSpecialty || p.specialties.includes(t.requiredSpecialty));
+  for (const a of out) {
+    const p = P[a.providerId];
+    const t = T[a.type];
+    if (!p || !t || eligible(t, p)) continue;
+    // cleaning (hygienist-safe) and filling (dentist) need no special room, so
+    // the existing operatory stays valid.
+    a.type = p.role === "hygienist" ? "cleaning" : "filling";
+  }
+}
+
 writeFileSync(DATA + "appointments.json", JSON.stringify(out, null, 2) + "\n", "utf-8");
 console.log(`Wrote ${out.length} appointments (${BASE} → ${END}) to appointments.json`);

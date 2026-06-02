@@ -25,6 +25,7 @@ const CASES = fileURLToPath(new URL("./cases.json", import.meta.url));
 type Expected = Partial<
   Pick<
     SchedulingIntent,
+    | "action"
     | "appointmentType"
     | "urgency"
     | "daysOfWeek"
