@@ -3,7 +3,8 @@ import type { ScheduleStore } from "../core/store/ScheduleStore";
 import type { SchedulingAssistant } from "../core/orchestrator/SchedulingAssistant";
 import type { TieredIntentExtractor } from "../core/intent/TieredIntentExtractor";
 import type { CostTracker } from "../core/llm/costTracker";
-import type { CandidateSlot, AvailabilityRule, EscalationLevel } from "../core/types";
+import type { CandidateSlot, AvailabilityRule, EscalationLevel, SchedulingIntent, Weekday } from "../core/types";
+import { generateCandidates } from "../core/schedule/candidateGenerator";
 import type { LlmClient } from "../core/llm/anthropicClient";
 import { parseRuleSentence } from "../core/rules/ruleParser";
 import { overlaps } from "../core/time";
@@ -128,6 +129,50 @@ export function createApp(deps: AppDeps): Hono {
   // The staff callback queue (newest first) — the office's emergency worklist.
   app.get("/api/callbacks", (c) => {
     return c.json({ callbacks });
+  });
+
+  // Open slots for booking, grouped by day. Same candidate generator the
+  // recommender uses (so eligibility, X-ray rooms, hours, lunch all hold), but
+  // returns EVERY opening in a date window — not just the top 3 — so the UI can
+  // let a patient pick any matching day and any open time. 30-minute booking
+  // granularity, deduped to one opening per provider+time.
+  app.get("/api/availability", (c) => {
+    const from = c.req.query("from");
+    if (!from) return c.json({ error: "from (YYYY-MM-DD) is required" }, 400);
+    const to = c.req.query("to") || from;
+    const type = c.req.query("type") || null;
+    const daysOfWeek = (c.req.query("days") || "")
+      .split(",")
+      .map((d) => d.trim())
+      .filter(Boolean) as Weekday[];
+
+    const intent: SchedulingIntent = {
+      appointmentType: type,
+      urgency: "routine",
+      earliestDate: from,
+      latestDate: to,
+      daysOfWeek,
+      timeEarliest: null,
+      timeLatest: null,
+      partOfDay: null,
+      preferredProviderId: null,
+      rawRequest: "",
+      source: "rules",
+      confidence: 1,
+    };
+
+    const seen = new Set<string>();
+    const slotsByDay: Record<string, CandidateSlot[]> = {};
+    for (const slot of generateCandidates(intent, store, { refDate: from })) {
+      if (Number(slot.start.slice(14, 16)) % 30 !== 0) continue; // grid-aligned
+      const key = `${slot.providerId}@${slot.start}`;
+      if (seen.has(key)) continue; // one opening per provider+time
+      seen.add(key);
+      const day = slot.start.slice(0, 10);
+      (slotsByDay[day] ??= []).push(slot);
+    }
+    for (const list of Object.values(slotsByDay)) list.sort((a, b) => a.start.localeCompare(b.start));
+    return c.json({ slotsByDay });
   });
 
   // The raw schedule state the calendar renders from.

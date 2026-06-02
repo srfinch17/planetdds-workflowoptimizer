@@ -93,6 +93,33 @@ describe("Hono backend API", () => {
     expect(body.pathCounts).toBeDefined();
   });
 
+  it("GET /api/availability returns open slots grouped by day for booking", async () => {
+    const res = await app.request("/api/availability?from=2026-06-04&to=2026-06-04&type=cleaning");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(Object.keys(body.slotsByDay)).toContain("2026-06-04");
+    const slots = body.slotsByDay["2026-06-04"];
+    expect(slots.length).toBeGreaterThan(0);
+    for (const s of slots) {
+      expect(s.start.slice(0, 10)).toBe("2026-06-04"); // on the requested day
+      expect(s.type).toBe("cleaning"); // of the requested type
+      expect(Number(s.start.slice(14, 16)) % 30).toBe(0); // 30-min booking granularity
+    }
+    // No two openings share the same provider + start time.
+    const keys = slots.map((s: any) => `${s.providerId}@${s.start}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("GET /api/availability honors a weekday filter (only matching days appear)", async () => {
+    const res = await app.request("/api/availability?from=2026-06-01&to=2026-06-12&type=cleaning&days=Thu");
+    const body = (await res.json()) as any;
+    for (const day of Object.keys(body.slotsByDay)) {
+      // 4 = Thursday
+      expect(new Date(`${day}T00:00:00`).getDay()).toBe(4);
+    }
+    expect(Object.keys(body.slotsByDay).length).toBeGreaterThan(0);
+  });
+
   it("POST /api/reset returns the metrics dashboard to a clean slate", async () => {
     await app.request("/api/schedule", {
       method: "POST",

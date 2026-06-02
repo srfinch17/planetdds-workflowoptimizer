@@ -35,6 +35,10 @@ export interface MonthCalendarProps {
   maxMonth?: string
   today?: string
   recommendedDays?: Set<string>
+  // When provided, ONLY these days are clickable (the rest are greyed out) —
+  // used to constrain the calendar to the days a request actually asked for
+  // (e.g. "Tue or Thu in late July"). Omit it to leave every working day open.
+  selectableDays?: Set<string>
 }
 
 /**
@@ -54,6 +58,7 @@ export function MonthCalendar({
   maxMonth,
   today,
   recommendedDays,
+  selectableDays,
 }: MonthCalendarProps) {
   const [month, setMonth] = useState(() => {
     let m = initialMonth ?? selectedDate?.slice(0, 7) ?? today?.slice(0, 7) ?? new Date().toISOString().slice(0, 7)
@@ -132,19 +137,29 @@ export function MonthCalendar({
           if (!date) return <div key={i} className="mc-cell mc-cell--pad" />
           const appts = byDay.get(date) ?? []
           const open = worksThatDay(date)
+          // When the request constrains the days (selectableDays passed), a day
+          // outside that set is shown but not clickable.
+          const allowed = !selectableDays || selectableDays.has(date)
           const classes = ['mc-cell']
           if (!open) classes.push('mc-cell--off')
+          if (selectableDays && !allowed) classes.push('mc-cell--disabled')
           if (date === today) classes.push('mc-cell--today')
           if (date === selectedDate) classes.push('mc-cell--selected')
           if (recommendedDays?.has(date)) classes.push('mc-cell--rec')
-          const clickable = open && !!onSelectDate
+          const clickable = open && allowed && !!onSelectDate
           return (
             <button
               key={i}
               className={classes.join(' ')}
               disabled={!clickable}
               onClick={clickable ? () => onSelectDate!(date) : undefined}
-              title={open ? `${appts.length} booked · click to view ${date}` : 'closed'}
+              title={
+                !open
+                  ? 'closed'
+                  : !allowed
+                    ? 'not one of the days this request asked for'
+                    : `${appts.length} booked · click to view ${date}`
+              }
             >
               <span className="mc-num">{Number(date.slice(8))}</span>
               <span className="mc-events">

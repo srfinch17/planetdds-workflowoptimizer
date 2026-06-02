@@ -219,6 +219,24 @@ export function getState(): Promise<StateResponse> {
   return fetch('/api/state').then((r) => jsonOrThrow<StateResponse>(r))
 }
 
+// Open slots for booking, grouped by day. Used to (a) know which days a
+// constrained request can actually book, and (b) list every open time on a day.
+export function getAvailability(params: {
+  from: string
+  to?: string
+  type?: string | null
+  days?: Weekday[]
+}): Promise<{ slotsByDay: Record<string, CandidateSlot[]> }> {
+  const q = new URLSearchParams()
+  q.set('from', params.from)
+  if (params.to) q.set('to', params.to)
+  if (params.type) q.set('type', params.type)
+  if (params.days && params.days.length) q.set('days', params.days.join(','))
+  return fetch(`/api/availability?${q}`).then((r) =>
+    jsonOrThrow<{ slotsByDay: Record<string, CandidateSlot[]> }>(r),
+  )
+}
+
 export function getMetrics(): Promise<MetricsResponse> {
   return fetch('/api/metrics').then((r) => jsonOrThrow<MetricsResponse>(r))
 }

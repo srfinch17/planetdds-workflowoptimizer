@@ -3,11 +3,13 @@ import {
   postSchedule,
   getState,
   postBook,
+  getAvailability,
   fmtWeekday,
   fmtDate,
   fmtTime,
   type ScheduleResponse,
   type ScoredSlot,
+  type CandidateSlot,
   type Provider,
   type Appointment,
   type AvailabilityRule,
@@ -48,6 +50,8 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const [patientPhone, setPatientPhone] = useState('')
   const [booked, setBooked] = useState<Record<string, string>>({}) // slotKey → confirmation #
   const [viewDay, setViewDay] = useState<string | null>(null) // day shown in the detail grid
+  const [daySlots, setDaySlots] = useState<Record<string, CandidateSlot[]>>({}) // open slots per day
+  const [selectableDays, setSelectableDays] = useState<Set<string> | null>(null) // null = no restriction
 
   const loadState = useCallback(() => {
     getState()
@@ -71,10 +75,14 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     setError(null)
     setResult(null)
     setBooked({})
+    setDaySlots({})
+    setSelectableDays(null)
     try {
       const res = await postSchedule(request.trim(), TODAY, mode)
       setResult(res)
-      setViewDay(res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? res.intent.earliestDate ?? TODAY)
+      const recDay = res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? res.intent.earliestDate ?? TODAY
+      setViewDay(recDay)
+      await loadAvailability(res, recDay)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -82,18 +90,63 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     }
   }
 
+  // Pull the open slots for the days this request can book into. A request that
+  // names days/dates ("Tue or Thu in late July") restricts the calendar to those
+  // days; a vague one leaves the calendar open and just loads the shown day.
+  async function loadAvailability(res: ScheduleResponse, recDay: string) {
+    const { intent } = res
+    const type = intent.appointmentType
+    const recDates = res.recommendation.slots.map((s) => s.slot.start.slice(0, 10))
+    const constrained = intent.daysOfWeek.length > 0 || intent.earliestDate != null
+    if (!constrained) {
+      setSelectableDays(null) // vague request → every working day stays clickable
+      const { slotsByDay } = await getAvailability({ from: recDay, to: recDay, type })
+      setDaySlots(slotsByDay)
+      return
+    }
+    const from = intent.earliestDate ?? TODAY
+    const to = intent.latestDate ?? intent.earliestDate ?? addDaysStr(TODAY, 56)
+    const { slotsByDay } = await getAvailability({ from, to, type, days: intent.daysOfWeek })
+    const map: Record<string, CandidateSlot[]> = { ...slotsByDay }
+    // Always allow the day(s) the system actually recommended — even a widened,
+    // best-effort day that falls outside the requested window.
+    for (const d of recDates) {
+      if (!map[d]) {
+        const extra = await getAvailability({ from: d, to: d, type })
+        Object.assign(map, extra.slotsByDay)
+      }
+    }
+    setDaySlots(map)
+    setSelectableDays(new Set(Object.keys(map)))
+  }
+
+  async function selectDay(day: string) {
+    setViewDay(day)
+    if (!daySlots[day] && result) {
+      const { slotsByDay } = await getAvailability({ from: day, to: day, type: result.intent.appointmentType })
+      setDaySlots((prev) => ({ ...prev, ...slotsByDay }))
+    }
+  }
+
   const canBook = patientName.trim().length > 0 && patientPhone.trim().length > 0
 
-  async function book(s: ScoredSlot) {
+  async function bookSlot(slot: CandidateSlot) {
     if (!canBook) return
+    const key = `${slot.providerId}@${slot.start}`
     try {
-      const res = await postBook(s.slot, { name: patientName.trim(), phone: patientPhone.trim() }, result?.requestId)
-      setBooked((b) => ({ ...b, [slotKey(s)]: res.confirmationNumber }))
+      const res = await postBook(slot, { name: patientName.trim(), phone: patientPhone.trim() }, result?.requestId)
+      setBooked((b) => ({ ...b, [key]: res.confirmationNumber }))
       loadState()
+      // The slot is now taken — refresh the day's open list so it drops out.
+      const day = slot.start.slice(0, 10)
+      const refreshed = await getAvailability({ from: day, to: day, type: slot.type })
+      setDaySlots((prev) => ({ ...prev, ...refreshed.slotsByDay }))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
   }
+
+  const book = (s: ScoredSlot) => bookSlot(s.slot)
 
   const slots = result?.recommendation.slots ?? []
   const rankOf = new Map(slots.map((s, i) => [slotKey(s), i + 1]))
@@ -109,6 +162,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const highlights = new Set(slots.map(slotKey))
   const recommendedDays = new Set(slots.map((s) => s.slot.start.slice(0, 10)))
   const bookedKeys = new Set(Object.keys(booked).filter((k) => booked[k]))
+  const openSlotsForDay = daySlots[dayShown] ?? []
 
   const renderCard = (s: ScoredSlot) => (
     <SlotCard
@@ -247,14 +301,20 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
                 providers={providers}
                 rules={rules}
                 selectedDate={dayShown}
-                onSelectDate={setViewDay}
+                onSelectDate={selectDay}
                 initialMonth={calendarDay.slice(0, 7)}
                 minMonth={MIN_MONTH}
                 maxMonth={MAX_MONTH}
                 today={TODAY}
                 recommendedDays={recommendedDays}
+                selectableDays={selectableDays ?? undefined}
               />
-              <span className="field-label">📆 {dayShown} — click a ★ slot to book</span>
+              {selectableDays && (
+                <p className="cal-hint">
+                  Showing only the days this request asked for — greyed days aren’t available.
+                </p>
+              )}
+              <span className="field-label">📆 {fmtWeekday(`${dayShown}T00:00:00`)} {fmtDate(`${dayShown}T00:00:00`)} — available times</span>
               <Calendar
                 providers={providers}
                 appointments={appointments}
@@ -267,12 +327,66 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
                   if (s) book(s)
                 }}
               />
+              <OpenTimes
+                slots={openSlotsForDay}
+                providerName={providerName}
+                booked={booked}
+                canBook={canBook}
+                onBook={bookSlot}
+              />
             </section>
           )}
         </>
       )}
     </div>
   )
+}
+
+// The full list of bookable openings on the shown day — so a patient can book
+// ANY open time, not just the three recommended slots.
+function OpenTimes({
+  slots,
+  providerName,
+  booked,
+  canBook,
+  onBook,
+}: {
+  slots: CandidateSlot[]
+  providerName: (id: string) => string
+  booked: Record<string, string>
+  canBook: boolean
+  onBook: (slot: CandidateSlot) => void
+}) {
+  if (slots.length === 0) {
+    return <p className="open-times__empty">No open times on this day — pick another.</p>
+  }
+  return (
+    <div className="open-times">
+      {slots.map((s) => {
+        const key = `${s.providerId}@${s.start}`
+        const conf = booked[key]
+        return (
+          <button
+            key={key}
+            className={`open-slot${conf ? ' open-slot--booked' : ''}`}
+            disabled={!!conf || !canBook}
+            title={conf ? `Booked · ${conf}` : canBook ? 'Book this time' : 'Enter name + phone above to book'}
+            onClick={() => onBook(s)}
+          >
+            <span className="open-slot__time">{fmtTime(s.start)}</span>
+            <span className="open-slot__who">{providerName(s.providerId)}</span>
+            <span className="open-slot__cta">{conf ? '✓ booked' : 'book'}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function addDaysStr(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function IntentSummary({

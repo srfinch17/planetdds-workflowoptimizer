@@ -679,6 +679,64 @@
   flex-direction: column;
   gap: 14px;
 }
+.cal-hint {
+  margin: -6px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+/* Bookable open times for the selected day. */
+.open-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.open-times__empty {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.open-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+.open-slot:not(:disabled):hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+  box-shadow: var(--glow);
+}
+.open-slot:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.open-slot__time {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+}
+.open-slot__who {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.open-slot__cta {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--brand);
+}
+.open-slot--booked {
+  background: var(--good-bg);
+}
+.open-slot--booked .open-slot__cta {
+  color: var(--good);
+}
 .calendar-toolbar {
   display: flex;
   align-items: flex-end;
@@ -1545,6 +1603,13 @@ button.cal-block--hl:hover {
   background: transparent;
   cursor: default;
   opacity: 0.5;
+}
+/* A day outside the request's constraints: visible for context, not clickable. */
+.mc-cell--disabled {
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.32;
+  filter: grayscale(0.6);
 }
 .mc-cell--today .mc-num {
   background: var(--brand);
