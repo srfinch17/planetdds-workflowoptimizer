@@ -1,5 +1,6 @@
 import { fmtTime, type Provider, type Appointment, type AvailabilityRule } from '../api'
 import { worksOn, officeClosure } from '../availability'
+import { typeIcon } from '../apptIcons'
 
 // The grid window: clinic-wide open/close in 30-minute rows. Per-provider hours
 // inside this window are shaded "closed" so the grid is honest about who's in.
@@ -140,7 +141,7 @@ export function Calendar({
             className="cal-block cal-block--appt"
             style={{ gridColumn: 2 + idx, gridRow: `${line(isoToMin(a.start))} / ${line(isoToMin(a.end))}` }}
           >
-            <strong>{a.type}</strong>
+            <strong>{typeIcon(a.type)} {a.type}</strong>
             <small>{fmtTime(a.start)}</small>
           </div>
         )

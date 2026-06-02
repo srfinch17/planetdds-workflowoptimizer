@@ -15,6 +15,7 @@ import {
 } from '../api'
 import { Calendar } from '../components/Calendar'
 import { MonthCalendar } from '../components/MonthCalendar'
+import { typeIcon } from '../apptIcons'
 import { todayISO, thisMonth, monthsAhead } from '../today'
 
 // One-click example requests. The Dr. Smith one shows the "your dentist vs.
@@ -384,7 +385,7 @@ function SlotCard({
       <div className="slot-who">
         <span className="ico">🦷</span>
         {providerName}
-        {isPreferred ? ' · your dentist' : ''} · {slot.slot.type}
+        {isPreferred ? ' · your dentist' : ''} · {typeIcon(slot.slot.type)} {slot.slot.type}
       </div>
 
       <p className="slot-explanation">{slot.explanation}</p>

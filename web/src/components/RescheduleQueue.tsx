@@ -1,4 +1,5 @@
 import { fmtWeekday, fmtDate, fmtTime, type RescheduleRecord, type Provider, type Patient } from '../api'
+import { typeIcon } from '../apptIcons'
 
 /**
  * Appointments an office closure cancelled. The office MUST be closed, so these
@@ -36,7 +37,7 @@ export function RescheduleQueue({
               <p className="cb-request">
                 {patName(r.appointment.patientId)} · {provName(r.appointment.providerId)} ·{' '}
                 {fmtWeekday(r.appointment.start)} {fmtDate(r.appointment.start)} {fmtTime(r.appointment.start)} ·{' '}
-                {r.appointment.type}
+                {typeIcon(r.appointment.type)} {r.appointment.type}
               </p>
             </li>
           ))}

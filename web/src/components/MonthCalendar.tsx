@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Appointment, Provider, AvailabilityRule } from '../api'
 import { worksOn, officeClosure } from '../availability'
+import { typeIcon } from '../apptIcons'
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MONTHS = [
@@ -149,7 +150,7 @@ export function MonthCalendar({
               <span className="mc-events">
                 {appts.slice(0, 3).map((a) => (
                   <span key={a.id} className={`mc-ev mc-ev--${colorOf(a.providerId)}`}>
-                    {compactTime(a.start)} {a.type}
+                    {compactTime(a.start)} {typeIcon(a.type)} {a.type}
                   </span>
                 ))}
                 {appts.length > 3 && <span className="mc-more">+{appts.length - 3} more</span>}
