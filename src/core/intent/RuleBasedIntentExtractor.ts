@@ -85,6 +85,16 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
       return { earliestDate: null, latestDate: null, daysOfWeek: [], dateResolved: false };
     }
 
+    // MORE THAN ONE date reference ("a tuesday or thursday in late july" →
+    // tuesday + thursday + july) is beyond what this deterministic parser can
+    // faithfully combine. Grabbing results[0] would pin the wrong day (often
+    // ~today) and silently drop the rest. Declare the date UNRESOLVED so the
+    // tiered extractor escalates to the LLM (which reconciles them correctly);
+    // offline we then search unconstrained rather than confidently wrong.
+    if (results.length > 1) {
+      return { earliestDate: null, latestDate: null, daysOfWeek: [], dateResolved: false };
+    }
+
     const first = results[0]!;
     const startDate = localDateStr(first.start.date());
 

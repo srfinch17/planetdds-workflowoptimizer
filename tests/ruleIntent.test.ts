@@ -42,6 +42,18 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect(intent.appointmentType).not.toBe("emergency");
   });
 
+  it("defers on a multi-reference date instead of confidently grabbing the first one", () => {
+    // "a tuesday or thursday in late july" → chrono finds THREE references
+    // (tuesday, thursday, july). The parser must not pin the first ("tuesday",
+    // ~today) and silently drop "late july" — it should declare the date
+    // unresolved with low confidence so the tiered router escalates to the LLM.
+    const intent = extractor.extract("i need a cleaning on a tuesday or thursday in late july", ctx);
+    expect(intent.appointmentType).toBe("cleaning"); // the easy signal still resolves
+    expect(intent.earliestDate).toBeNull(); // no false concrete date
+    expect(intent.daysOfWeek).toEqual([]); // didn't keep only "tuesday"
+    expect(intent.confidence).toBeLessThan(0.6); // below the escalation threshold
+  });
+
   it("maps 'before noon' to a latest time and 'morning' to partOfDay", () => {
     const a = extractor.extract("something before noon next Tuesday", ctx);
     expect(a.timeLatest).toBe("12:00");
