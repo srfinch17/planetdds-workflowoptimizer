@@ -23,6 +23,7 @@ import { ManageAppointments } from '../components/ManageAppointments'
 import { BookingReview, BookingConfirmed, EscalationScreen } from '../components/BookingPanel'
 import { typeIcon } from '../apptIcons'
 import { todayISO, thisMonth, monthsAhead } from '../today'
+import { formatPhone, phoneDigits } from '../phone'
 
 // One-click example requests. The Dr. Smith one shows the "your dentist vs.
 // alternatives" grouping; the last one trips the emergency escalation.
@@ -538,19 +539,6 @@ function addDaysStr(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`)
   d.setDate(d.getDate() + days)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-// Phone helpers: format as the patient types → "(555) 555 - 5555", and require a
-// complete 10-digit number before a booking is allowed.
-function phoneDigits(s: string): string {
-  return s.replace(/\D/g, '')
-}
-function formatPhone(input: string): string {
-  const d = phoneDigits(input).slice(0, 10)
-  if (d.length === 0) return ''
-  if (d.length <= 3) return `(${d}`
-  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)} - ${d.slice(6)}`
 }
 
 function IntentSummary({

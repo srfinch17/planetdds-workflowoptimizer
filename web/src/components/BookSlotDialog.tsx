@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fmtWeekday, fmtDate, fmtTime, type CandidateSlot } from '../api'
 import { typeIcon } from '../apptIcons'
+import { formatPhone } from '../phone'
 
 /**
  * A small modal for staff to book an open slot directly from the Admin
@@ -71,8 +72,9 @@ export function BookSlotDialog({
           <span>Phone</span>
           <input
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Phone (optional)"
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="(555) 555 - 5555 (optional)"
+            inputMode="tel"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && canConfirm) onConfirm(name.trim(), phone.trim())
             }}
