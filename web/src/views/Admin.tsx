@@ -2,11 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   getState,
   getCallbacks,
+  getAvailability,
+  postBook,
   resetSystem,
   type StateResponse,
   type CallbackRecord,
+  type CandidateSlot,
 } from '../api'
 import { Calendar } from '../components/Calendar'
+import { BookSlotDialog } from '../components/BookSlotDialog'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { RuleTeacher } from '../components/RuleTeacher'
 import { RulesList } from '../components/RulesList'
@@ -34,6 +38,16 @@ export function Admin() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  // Admin-side booking: the open slots on the day grid are clickable so staff
+  // can book a patient directly (e.g. while on a callback). The type drives
+  // which openings are offered, so duration + eligibility stay correct.
+  const [bookType, setBookType] = useState('cleaning')
+  const [daySlots, setDaySlots] = useState<CandidateSlot[]>([]) // open slots for the shown day
+  const [pending, setPending] = useState<CandidateSlot | null>(null) // slot being booked
+  const [booking, setBooking] = useState(false)
+  const [bookError, setBookError] = useState<string | null>(null)
+  const [bookConfirm, setBookConfirm] = useState<string | null>(null) // transient "✓ Booked …"
+
   const reload = useCallback(() => {
     setLoading(true)
     Promise.all([getState(), getCallbacks()])
@@ -51,6 +65,48 @@ export function Admin() {
   useEffect(() => {
     reload()
   }, [reload])
+
+  // Refresh the bookable open slots whenever the shown day or the chosen
+  // appointment type changes (and once the schedule state is loaded).
+  const loadDaySlots = useCallback(() => {
+    getAvailability({ from: day, to: day, type: bookType })
+      .then(({ slotsByDay }) => setDaySlots(slotsByDay[day] ?? []))
+      .catch(() => setDaySlots([]))
+  }, [day, bookType])
+
+  useEffect(() => {
+    if (state) loadDaySlots()
+  }, [state, loadDaySlots])
+
+  // The "✓ Booked" confirmation is a transient acknowledgement — clear it after
+  // a few seconds so it doesn't linger as stale once staff move on.
+  useEffect(() => {
+    if (!bookConfirm) return
+    const t = setTimeout(() => setBookConfirm(null), 5000)
+    return () => clearTimeout(t)
+  }, [bookConfirm])
+
+  const providerName = (id: string) => state?.providers.find((p) => p.id === id)?.name ?? id
+
+  // The open slots become bookable highlights on the grid, keyed provider@start.
+  const openByKey = new Map(daySlots.map((s) => [`${s.providerId}@${s.start}`, s]))
+  const openHighlights = new Set(openByKey.keys())
+
+  async function confirmBooking(name: string, phone: string) {
+    if (!pending) return
+    setBooking(true)
+    setBookError(null)
+    try {
+      const res = await postBook(pending, { name, phone: phone || undefined })
+      setBookConfirm(`✓ Booked ${name} · ${res.confirmationNumber}`)
+      setPending(null)
+      reload() // new appointment shows as a booked block; loadDaySlots re-runs after
+    } catch (e) {
+      setBookError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBooking(false)
+    }
+  }
 
   return (
     <div className="calendar-panel">
@@ -81,6 +137,10 @@ export function Admin() {
             <span className="legend-swatch legend-swatch--rule" />
             blocked (lunch / off)
           </span>
+          <span>
+            <span className="legend-swatch legend-swatch--open" />
+            open · click to book
+          </span>
         </div>
       </div>
 
@@ -109,9 +169,54 @@ export function Admin() {
 
       {state && (
         <section className="calendar-panel">
-          <span className="field-label">📆 {day} — day detail</span>
-          <Calendar providers={state.providers} appointments={state.appointments} rules={state.rules} day={day} />
+          <div className="daydetail-head">
+            <span className="field-label">
+              📆 {day} — day detail · <span className="field-label__cta">click an open slot to book</span>
+            </span>
+            <label className="book-type">
+              <span>Booking</span>
+              <select value={bookType} onChange={(e) => setBookType(e.target.value)}>
+                {state.appointmentTypes.map((t) => (
+                  <option key={t.type} value={t.type}>
+                    {t.type} · {t.durationMin}m
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {bookConfirm && <div className="banner banner--ok">{bookConfirm}</div>}
+          <Calendar
+            providers={state.providers}
+            appointments={state.appointments}
+            rules={state.rules}
+            day={day}
+            highlights={openHighlights}
+            onBookSlot={(key) => {
+              const s = openByKey.get(key)
+              if (s) {
+                setBookError(null)
+                setBookConfirm(null)
+                setPending(s)
+              }
+            }}
+          />
         </section>
+      )}
+
+      {pending && (
+        <BookSlotDialog
+          slot={pending}
+          providerName={providerName(pending.providerId)}
+          busy={booking}
+          error={bookError}
+          onCancel={() => {
+            if (!booking) {
+              setPending(null)
+              setBookError(null)
+            }
+          }}
+          onConfirm={confirmBooking}
+        />
       )}
 
       <RuleTeacher onApplied={reload} />

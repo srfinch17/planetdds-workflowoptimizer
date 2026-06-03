@@ -1869,3 +1869,122 @@ button.cal-block--hl:hover {
     overflow-x: auto;
   }
 }
+
+/* ============================================================
+   Admin-side booking: open slots on the day grid are clickable,
+   with a type selector and a small booking dialog.
+   ============================================================ */
+.legend-swatch--open {
+  background: var(--good-bg);
+  border: 1px dashed var(--good);
+}
+
+/* day-detail header: label on the left, booking-type selector on the right */
+.daydetail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.book-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.book-type select {
+  font: inherit;
+  font-family: var(--font-mono);
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  text-transform: capitalize;
+  cursor: pointer;
+}
+
+/* a green success banner, mirroring banner--error */
+.banner--ok {
+  background: var(--good-bg);
+  border-color: var(--good-soft-border);
+  color: var(--good);
+  font-weight: 600;
+}
+
+/* booking dialog */
+.book-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.14s ease;
+}
+.book-dialog {
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow), 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: riseIn 0.18s ease backwards;
+}
+.book-dialog__head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.book-dialog__title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.book-dialog__slot {
+  font-size: 14px;
+  color: var(--ink);
+}
+.book-dialog__field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.book-dialog__field span {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.book-dialog__field input {
+  font: inherit;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--ink);
+}
+.book-dialog__field input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.book-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
