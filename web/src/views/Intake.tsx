@@ -4,6 +4,7 @@ import {
   postCallbackContact,
   getState,
   postBook,
+  postCancel,
   getAvailability,
   fmtWeekday,
   fmtDate,
@@ -19,6 +20,7 @@ import {
 import { Calendar } from '../components/Calendar'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { ManageAppointments } from '../components/ManageAppointments'
+import { BookingReview, BookingConfirmed } from '../components/BookingPanel'
 import { typeIcon } from '../apptIcons'
 import { todayISO, thisMonth, monthsAhead } from '../today'
 
@@ -50,7 +52,17 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const [rules, setRules] = useState<AvailabilityRule[]>([])
   const [patientName, setPatientName] = useState('')
   const [patientPhone, setPatientPhone] = useState('')
-  const [booked, setBooked] = useState<Record<string, string>>({}) // slotKey → confirmation #
+  // Booking phase machine: RESULTS (cards + calendar) → REVIEW (a slot picked,
+  // not yet booked) → BOOKED (confirmed). Nothing is booked until they confirm.
+  const [pendingBooking, setPendingBooking] = useState<CandidateSlot | null>(null)
+  const [confirmed, setConfirmed] = useState<{
+    slot: CandidateSlot
+    confirmationNumber: string
+    appointmentId: string
+    patientId: string
+  } | null>(null)
+  const [bookingBusy, setBookingBusy] = useState(false)
+  const [bookingError, setBookingError] = useState<string | null>(null)
   const [viewDay, setViewDay] = useState<string | null>(null) // day shown in the detail grid
   const [daySlots, setDaySlots] = useState<Record<string, CandidateSlot[]>>({}) // open slots per day
   const [selectableDays, setSelectableDays] = useState<Set<string> | null>(null) // null = no restriction
@@ -82,7 +94,9 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     setLoading(true)
     setError(null)
     setResult(null)
-    setBooked({})
+    setPendingBooking(null)
+    setConfirmed(null)
+    setBookingError(null)
     setDaySlots({})
     setSelectableDays(null)
     setCallbackDone(false)
@@ -176,32 +190,79 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     }
   }
 
-  const canBook = patientName.trim().length > 0 && patientPhone.trim().length > 0
+  const canBook = patientName.trim().length > 0 && phoneDigits(patientPhone).length === 10
 
-  async function bookSlot(slot: CandidateSlot) {
+  // Step 1: pick a slot → go to the REVIEW step. Nothing is booked yet.
+  function bookSlot(slot: CandidateSlot) {
     if (!canBook) {
-      // Don't silently no-op — point the patient at the missing details.
-      setError('Add your name and phone first, then click a time to book.')
+      setError('Add your name and a complete phone number first, then pick a time.')
       nameRef.current?.focus()
       nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     setError(null)
-    const key = `${slot.providerId}@${slot.start}`
+    setBookingError(null)
+    setPendingBooking(slot)
+  }
+
+  // Step 2: actually book the reviewed slot. The confirmation number is created
+  // HERE — not when they first clicked. On a conflict (slot taken since the
+  // search) we drop back to the results with a refreshed, honest calendar.
+  async function confirmBooking() {
+    if (!pendingBooking) return
+    setBookingBusy(true)
+    setBookingError(null)
     try {
-      const res = await postBook(slot, { name: patientName.trim(), phone: patientPhone.trim() }, result?.requestId)
-      setBooked((b) => ({ ...b, [key]: res.confirmationNumber }))
+      const res = await postBook(
+        pendingBooking,
+        { name: patientName.trim(), phone: patientPhone.trim() },
+        result?.requestId,
+      )
+      setConfirmed({
+        slot: pendingBooking,
+        confirmationNumber: res.confirmationNumber,
+        appointmentId: res.appointment.id,
+        patientId: res.appointment.patientId,
+      })
+      setPendingBooking(null)
       loadState()
-      // The slot is now taken — refresh the day's open list so it drops out.
-      const day = slot.start.slice(0, 10)
-      const refreshed = await getAvailability({ from: day, to: day, type: slot.type })
-      setDaySlots((prev) => ({ ...prev, ...refreshed.slotsByDay }))
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      const msg = e instanceof Error ? e.message : String(e)
+      const day = pendingBooking.start.slice(0, 10)
+      const type = pendingBooking.type
+      setPendingBooking(null)
+      setError(msg)
+      try {
+        const refreshed = await getAvailability({ from: day, to: day, type })
+        setDaySlots((prev) => ({ ...prev, ...refreshed.slotsByDay }))
+      } catch {
+        /* ignore refresh failure */
+      }
+    } finally {
+      setBookingBusy(false)
     }
   }
 
-  const book = (s: ScoredSlot) => bookSlot(s.slot)
+  // The confirmed panel's "Cancel & start over": really cancel the appointment
+  // (frees the slot) and reset to a clean search. Keep the patient's name/phone.
+  async function cancelBookingAndReset() {
+    if (!confirmed) return
+    setBookingBusy(true)
+    try {
+      await postCancel(confirmed.appointmentId, confirmed.patientId)
+    } catch {
+      /* reset the view even if the cancel call fails */
+    }
+    setConfirmed(null)
+    setPendingBooking(null)
+    setResult(null)
+    setDaySlots({})
+    setSelectableDays(null)
+    setViewDay(null)
+    setBookingError(null)
+    setError(null)
+    setBookingBusy(false)
+  }
 
   const slots = result?.recommendation.slots ?? []
   const rankOf = new Map(slots.map((s, i) => [slotKey(s), i + 1]))
@@ -214,7 +275,6 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const calendarDay = slots[0]?.slot.start.slice(0, 10) ?? result?.intent.earliestDate ?? TODAY
   const dayShown = viewDay ?? calendarDay
   const recommendedDays = new Set(slots.map((s) => s.slot.start.slice(0, 10)))
-  const bookedKeys = new Set(Object.keys(booked).filter((k) => booked[k]))
   // EVERY open time on the shown day is a bookable ★ in the grid (not just the
   // top 3) — keyed provider@start so the day grid can place + book each one.
   const openSlotsForDay = daySlots[dayShown] ?? []
@@ -228,8 +288,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
       slot={s}
       providerName={providerName(s.slot.providerId)}
       isPreferred={!!pref && s.slot.providerId === pref}
-      confirmation={booked[slotKey(s)]}
-      onBook={() => book(s)}
+      onBook={() => bookSlot(s.slot)}
     />
   )
 
@@ -286,8 +345,9 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
           📞
           <input
             value={patientPhone}
-            onChange={(e) => setPatientPhone(e.target.value)}
-            placeholder="Phone"
+            onChange={(e) => setPatientPhone(formatPhone(e.target.value))}
+            placeholder="(555) 555 - 5555"
+            inputMode="tel"
           />
         </label>
         <span className={`patient-id__status ${canBook ? 'patient-id__status--ok' : ''}`}>
@@ -330,6 +390,25 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
 
       {result && (
         <>
+          {confirmed ? (
+            <BookingConfirmed
+              slot={confirmed.slot}
+              providerName={providerName(confirmed.slot.providerId)}
+              confirmationNumber={confirmed.confirmationNumber}
+              busy={bookingBusy}
+              onCancel={cancelBookingAndReset}
+            />
+          ) : pendingBooking ? (
+            <BookingReview
+              slot={pendingBooking}
+              providerName={providerName(pendingBooking.providerId)}
+              busy={bookingBusy}
+              error={bookingError}
+              onConfirm={confirmBooking}
+              onCancel={() => setPendingBooking(null)}
+            />
+          ) : (
+            <>
           <IntentSummary result={result} providerName={providerName} />
 
           {result.intent.action !== 'book' && result.patientMatch ? (
@@ -401,6 +480,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
                 today={TODAY}
                 recommendedDays={recommendedDays}
                 selectableDays={selectableDays ?? undefined}
+                patientView
               />
               {selectableDays && (
                 <p className="cal-hint">
@@ -418,7 +498,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
                 day={dayShown}
                 highlights={highlights}
                 recommendedKeys={new Set(slots.map(slotKey))}
-                bookedKeys={bookedKeys}
+                patientView
                 onBookSlot={(key) => {
                   const s = openByKey.get(key)
                   if (s) bookSlot(s)
@@ -427,6 +507,8 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
             </section>
           )}
           </>
+          )}
+            </>
           )}
         </>
       )}
@@ -438,6 +520,19 @@ function addDaysStr(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`)
   d.setDate(d.getDate() + days)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Phone helpers: format as the patient types → "(555) 555 - 5555", and require a
+// complete 10-digit number before a booking is allowed.
+function phoneDigits(s: string): string {
+  return s.replace(/\D/g, '')
+}
+function formatPhone(input: string): string {
+  const d = phoneDigits(input).slice(0, 10)
+  if (d.length === 0) return ''
+  if (d.length <= 3) return `(${d}`
+  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)} - ${d.slice(6)}`
 }
 
 function IntentSummary({
@@ -512,17 +607,14 @@ function SlotCard({
   slot,
   providerName,
   isPreferred,
-  confirmation,
   onBook,
 }: {
   rank: number
   slot: ScoredSlot
   providerName: string
   isPreferred: boolean
-  confirmation?: string
   onBook: () => void
 }) {
-  const booked = !!confirmation
   const matched = slot.factors.filter((f) => f.matched && f.contribution > 0)
   return (
     <article className="card slot-card">
@@ -566,8 +658,8 @@ function SlotCard({
         ))}
       </ul>
 
-      <button className="btn btn--book" onClick={onBook} disabled={booked}>
-        {booked ? `✓ Booked · ${confirmation}` : '📌 Book this slot'}
+      <button className="btn btn--book" onClick={onBook}>
+        📌 Book this slot
       </button>
     </article>
   )

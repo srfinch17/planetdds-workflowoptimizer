@@ -2013,3 +2013,114 @@ button.cal-block--hl:hover {
     opacity: 1;
   }
 }
+
+/* ============================================================
+   Patient-view privacy + the two-step booking panels.
+   ============================================================ */
+
+/* Day grid: any busy/blocked/off cell reads as a uniform muted-red
+   "unavailable" for patients — no type, no lunch, no other-patient detail. */
+.cal-block--unavail {
+  background: var(--bad-soft);
+  color: var(--bad);
+  border: 1px solid var(--bad-soft-border);
+  font-weight: 600;
+  font-size: 11px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.cal-block--unavail strong,
+.cal-block--unavail small {
+  font-weight: 600;
+}
+/* Month grid (patient view): a small "open" marker on bookable days. */
+.mc-open {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--good);
+  letter-spacing: 0.03em;
+}
+
+/* --- Step 1: review panel --- */
+.booking-review {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: riseIn 0.3s ease backwards;
+}
+.booking-review__slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--brand-soft-border);
+  border-radius: 10px;
+  background: var(--brand-soft);
+}
+.booking-review__what {
+  font-size: 16px;
+  color: var(--ink);
+  text-transform: capitalize;
+}
+.booking-review__when {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.booking-review__ask {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.booking-review__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* --- Step 2: confirmed panel --- */
+.booking-confirmed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 28px 20px;
+  border-color: var(--good-soft-border);
+  background: color-mix(in srgb, var(--good-bg) 55%, var(--surface));
+  animation: riseIn 0.35s ease backwards;
+}
+.booking-confirmed__check {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--good);
+  color: var(--on-brand);
+  font-size: 28px;
+  font-weight: 800;
+  box-shadow: var(--glow);
+}
+.booking-confirmed__title {
+  font-size: 22px;
+  color: var(--good);
+}
+.booking-confirmed__detail {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.booking-confirmed__conf {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-soft);
+  letter-spacing: 0.03em;
+}
+.booking-confirmed__reminder {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.booking-confirmed .btn--danger-outline {
+  margin-top: 8px;
+}

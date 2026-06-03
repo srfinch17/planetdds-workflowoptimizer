@@ -39,6 +39,9 @@ export interface MonthCalendarProps {
   // used to constrain the calendar to the days a request actually asked for
   // (e.g. "Tue or Thu in late July"). Omit it to leave every working day open.
   selectableDays?: Set<string>
+  // Patient privacy: hide the per-appointment type chips (show only day numbers +
+  // which days are open to drill into). Admin leaves it off to see the chips.
+  patientView?: boolean
 }
 
 /**
@@ -59,6 +62,7 @@ export function MonthCalendar({
   today,
   recommendedDays,
   selectableDays,
+  patientView,
 }: MonthCalendarProps) {
   const [month, setMonth] = useState(() => {
     let m = initialMonth ?? selectedDate?.slice(0, 7) ?? today?.slice(0, 7) ?? new Date().toISOString().slice(0, 7)
@@ -158,18 +162,24 @@ export function MonthCalendar({
                   ? 'closed'
                   : !allowed
                     ? 'not one of the days this request asked for'
-                    : `${appts.length} booked · click to view ${date}`
+                    : patientView
+                      ? 'click to see open times'
+                      : `${appts.length} booked · click to view ${date}`
               }
             >
               <span className="mc-num">{Number(date.slice(8))}</span>
-              <span className="mc-events">
-                {appts.slice(0, 3).map((a) => (
-                  <span key={a.id} className={`mc-ev mc-ev--${colorOf(a.providerId)}`}>
-                    {compactTime(a.start)} {typeIcon(a.type)} {a.type}
-                  </span>
-                ))}
-                {appts.length > 3 && <span className="mc-more">+{appts.length - 3} more</span>}
-              </span>
+              {patientView ? (
+                open && allowed ? <span className="mc-open">open</span> : null
+              ) : (
+                <span className="mc-events">
+                  {appts.slice(0, 3).map((a) => (
+                    <span key={a.id} className={`mc-ev mc-ev--${colorOf(a.providerId)}`}>
+                      {compactTime(a.start)} {typeIcon(a.type)} {a.type}
+                    </span>
+                  ))}
+                  {appts.length > 3 && <span className="mc-more">+{appts.length - 3} more</span>}
+                </span>
+              )}
             </button>
           )
         })}

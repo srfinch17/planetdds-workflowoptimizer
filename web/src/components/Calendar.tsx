@@ -38,6 +38,9 @@ export interface CalendarProps {
   recommendedKeys?: Set<string> // the AI's top picks among highlights — get a ★
   bookedKeys?: Set<string> // slots already booked (shown as ✓)
   onBookSlot?: (key: string) => void // when set, highlights become Book buttons
+  // Patient privacy: render every busy/blocked/off cell as a plain "unavailable"
+  // (no procedure type, no "lunch", no other-patient detail). Admin leaves it off.
+  patientView?: boolean
 }
 
 /**
@@ -56,6 +59,7 @@ export function Calendar({
   recommendedKeys,
   bookedKeys,
   onBookSlot,
+  patientView,
 }: CalendarProps) {
   const dayAppts = appointments.filter((a) => a.start.slice(0, 10) === day)
   const closed = officeClosure(day, rules)
@@ -111,8 +115,8 @@ export function Calendar({
         const av = worksOn(p, day, rules)
         if (closed || !av.works) {
           return (
-            <div key={`off-${p.id}`} className="cal-block cal-block--off" style={{ gridColumn: col, gridRow: `2 / ${2 + ROWS}` }}>
-              {closed ? '🔒 office closed' : 'day off'}
+            <div key={`off-${p.id}`} className={`cal-block cal-block--off${patientView ? ' cal-block--unavail' : ''}`} style={{ gridColumn: col, gridRow: `2 / ${2 + ROWS}` }}>
+              {patientView ? 'unavailable' : closed ? '🔒 office closed' : 'day off'}
             </div>
           )
         }
@@ -139,10 +143,10 @@ export function Calendar({
           .map((r) => (
             <div
               key={r.id}
-              className="cal-block cal-block--rule"
+              className={`cal-block cal-block--rule${patientView ? ' cal-block--unavail' : ''}`}
               style={{ gridColumn: 2 + idx, gridRow: `${line(hhmmToMin(r.start!))} / ${line(hhmmToMin(r.end!))}` }}
             >
-              {r.reason}
+              {patientView ? 'unavailable' : r.reason}
             </div>
           )),
       )}
@@ -153,11 +157,17 @@ export function Calendar({
         return (
           <div
             key={a.id}
-            className="cal-block cal-block--appt"
+            className={`cal-block cal-block--appt${patientView ? ' cal-block--unavail' : ''}`}
             style={{ gridColumn: 2 + idx, gridRow: `${line(isoToMin(a.start))} / ${line(isoToMin(a.end))}` }}
           >
-            <strong>{typeIcon(a.type)} {a.type}</strong>
-            <small>{fmtTime(a.start)}</small>
+            {patientView ? (
+              <span>unavailable</span>
+            ) : (
+              <>
+                <strong>{typeIcon(a.type)} {a.type}</strong>
+                <small>{fmtTime(a.start)}</small>
+              </>
+            )}
           </div>
         )
       })}
