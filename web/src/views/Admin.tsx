@@ -103,6 +103,10 @@ export function Admin() {
       reload() // new appointment shows as a booked block; loadDaySlots re-runs after
     } catch (e) {
       setBookError(e instanceof Error ? e.message : String(e))
+      // If the slot was taken since the grid loaded (409 conflict), refresh the
+      // open list so the now-unavailable time drops out of the grid behind the
+      // dialog — staff see reality the moment they dismiss the error.
+      loadDaySlots()
     } finally {
       setBooking(false)
     }
