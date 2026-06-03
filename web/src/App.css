@@ -2124,3 +2124,21 @@ button.cal-block--hl:hover {
 .booking-confirmed .btn--danger-outline {
   margin-top: 8px;
 }
+/* confirmed booking is the whole page — give the lone panel breathing room */
+.intake--confirmed {
+  padding-top: 24px;
+}
+
+/* per-dentist name color on recommendation cards — matches the calendar columns */
+.prov-name {
+  font-weight: 700;
+}
+.prov-name--a {
+  color: var(--prov-a);
+}
+.prov-name--b {
+  color: var(--prov-b);
+}
+.prov-name--c {
+  color: var(--prov-c);
+}

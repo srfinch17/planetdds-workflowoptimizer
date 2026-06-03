@@ -3,7 +3,8 @@ import { fileURLToPath } from "node:url";
 import { JsonScheduleStore } from "../src/core/store/JsonScheduleStore";
 import { generateCandidates } from "../src/core/schedule/candidateGenerator";
 import { overlaps, weekdayOf, withinHours } from "../src/core/time";
-import type { SchedulingIntent } from "../src/core/types";
+import type { Provider, Operatory, AppointmentType, SchedulingIntent } from "../src/core/types";
+import type { ScheduleStore } from "../src/core/store/ScheduleStore";
 
 const SEED_DIR = fileURLToPath(new URL("../src/core/data", import.meta.url));
 
@@ -25,6 +26,32 @@ function intent(overrides: Partial<SchedulingIntent>): SchedulingIntent {
     source: "rules",
     confidence: 1,
     ...overrides,
+  };
+}
+
+// A synthetic store with arbitrary providers/types — lets us prove the
+// data-driven role eligibility independent of the seed (which is all dentists).
+function prov(id: string, role: "dentist" | "hygienist", specialties: string[]): Provider {
+  return { id, name: id, role, specialties, workdays: ["Thu"], hours: { start: "08:00", end: "17:00" } };
+}
+function makeStore(providers: Provider[], types: AppointmentType[]): ScheduleStore {
+  const operatories: Operatory[] = [{ id: "op-1", name: "Op 1", equipment: ["xray"] }];
+  const noop = () => {};
+  return {
+    getProviders: () => providers,
+    getOperatories: () => operatories,
+    getPatients: () => [],
+    getAppointmentTypes: () => types,
+    getAppointments: () => [],
+    getRules: () => [],
+    addRule: noop,
+    removeRule: () => false,
+    addPatient: noop,
+    book: () => {
+      throw new Error("not used");
+    },
+    cancelAppointment: () => undefined,
+    reload: noop,
   };
 }
 
@@ -92,22 +119,29 @@ describe("generateCandidates (hard constraints)", () => {
 describe("generateCandidates (provider eligibility)", () => {
   const store = new JsonScheduleStore(SEED_DIR, { persist: false });
 
-  it("never offers a hygienist for an emergency (dentists only)", () => {
-    const got = generateCandidates(
-      intent({ appointmentType: "emergency", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
-      store,
+  // The seed is now all dentists (Dr. Jones included), so role eligibility is
+  // proven with a SYNTHETIC hygienist — the data-driven `eligibleRoles` logic
+  // still holds: drop in a hygienist and the generator keeps them out of
+  // dentist-only procedures, but still offers them a cleaning.
+  it("role eligibility: a hygienist is excluded from a dentists-only type, allowed for a cleaning", () => {
+    const roleStore = makeStore(
+      [prov("d1", "dentist", ["general"]), prov("h1", "hygienist", ["cleaning"])],
+      [
+        { type: "filling", durationMin: 60, defaultUrgency: "soon", eligibleRoles: ["dentist"] },
+        { type: "cleaning", durationMin: 30, defaultUrgency: "routine", eligibleRoles: ["dentist", "hygienist"] },
+      ],
     );
-    expect(got.length).toBeGreaterThan(0);
-    expect(got.some((c) => c.providerId === "prov-jones")).toBe(false);
-  });
-
-  it("never offers a hygienist for a filling (dentists only)", () => {
-    const got = generateCandidates(
+    const fillings = generateCandidates(
       intent({ appointmentType: "filling", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
-      store,
+      roleStore,
     );
-    expect(got.length).toBeGreaterThan(0);
-    expect(got.some((c) => c.providerId === "prov-jones")).toBe(false);
+    expect(fillings.length).toBeGreaterThan(0);
+    expect(fillings.some((c) => c.providerId === "h1")).toBe(false); // hygienist NOT offered a filling
+    const cleanings = generateCandidates(
+      intent({ appointmentType: "cleaning", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
+      roleStore,
+    );
+    expect(cleanings.some((c) => c.providerId === "h1")).toBe(true); // hygienist IS offered a cleaning
   });
 
   it("offers only Dr. Smith for an extraction (requires the extraction specialty)", () => {
@@ -119,7 +153,7 @@ describe("generateCandidates (provider eligibility)", () => {
     expect(got.every((c) => c.providerId === "prov-smith")).toBe(true);
   });
 
-  it("still offers the hygienist for a cleaning", () => {
+  it("offers Dr. Jones (a dentist) for a cleaning", () => {
     const got = generateCandidates(
       intent({ appointmentType: "cleaning", earliestDate: "2026-06-04", latestDate: "2026-06-04" }),
       store,

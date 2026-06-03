@@ -39,6 +39,8 @@ const EXAMPLES = [
 const TODAY = todayISO()
 const MIN_MONTH = thisMonth()
 const MAX_MONTH = monthsAhead(12)
+// Per-dentist color slots, matching Calendar/MonthCalendar (Smith=a · Pana=b · Jones=c).
+const PROV_COLORS = ['a', 'b', 'c', 'a', 'b', 'c']
 
 // `mode` is the engine setting from the header indicator (agentic/mixed/rules).
 export function Intake({ mode }: { mode: ExtractionMode }) {
@@ -88,6 +90,10 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   }, [loadState])
 
   const providerName = (id: string) => providers.find((p) => p.id === id)?.name ?? id
+  // Per-dentist color slot, by roster order — the SAME a/b/c mapping the calendar
+  // and Available-times grid use, so a dentist reads as one color everywhere.
+  const providerColor = (id: string) =>
+    PROV_COLORS[Math.max(0, providers.findIndex((p) => p.id === id)) % PROV_COLORS.length]
   const slotKey = (s: ScoredSlot) => `${s.slot.providerId}@${s.slot.start}`
 
   async function findAppointments() {
@@ -287,10 +293,27 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
       rank={rankOf.get(slotKey(s)) ?? 0}
       slot={s}
       providerName={providerName(s.slot.providerId)}
+      colorClass={providerColor(s.slot.providerId)}
       isPreferred={!!pref && s.slot.providerId === pref}
       onBook={() => bookSlot(s.slot)}
     />
   )
+
+  // A confirmed booking takes over the whole page — the request box and patient
+  // details disappear; there's just the confirmation (or cancel & start over).
+  if (confirmed) {
+    return (
+      <div className="intake intake--confirmed">
+        <BookingConfirmed
+          slot={confirmed.slot}
+          providerName={providerName(confirmed.slot.providerId)}
+          confirmationNumber={confirmed.confirmationNumber}
+          busy={bookingBusy}
+          onCancel={cancelBookingAndReset}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="intake">
@@ -390,15 +413,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
 
       {result && (
         <>
-          {confirmed ? (
-            <BookingConfirmed
-              slot={confirmed.slot}
-              providerName={providerName(confirmed.slot.providerId)}
-              confirmationNumber={confirmed.confirmationNumber}
-              busy={bookingBusy}
-              onCancel={cancelBookingAndReset}
-            />
-          ) : pendingBooking ? (
+          {pendingBooking ? (
             <BookingReview
               slot={pendingBooking}
               providerName={providerName(pendingBooking.providerId)}
@@ -606,12 +621,14 @@ function SlotCard({
   rank,
   slot,
   providerName,
+  colorClass,
   isPreferred,
   onBook,
 }: {
   rank: number
   slot: ScoredSlot
   providerName: string
+  colorClass: string
   isPreferred: boolean
   onBook: () => void
 }) {
@@ -641,7 +658,7 @@ function SlotCard({
       </div>
       <div className="slot-who">
         <span className="ico">🦷</span>
-        {providerName}
+        <strong className={`prov-name prov-name--${colorClass}`}>{providerName}</strong>
         {isPreferred ? ' · your dentist' : ''} · {typeIcon(slot.slot.type)} {slot.slot.type}
       </div>
 
