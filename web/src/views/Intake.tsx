@@ -20,7 +20,7 @@ import {
 import { Calendar } from '../components/Calendar'
 import { MonthCalendar } from '../components/MonthCalendar'
 import { ManageAppointments } from '../components/ManageAppointments'
-import { BookingReview, BookingConfirmed } from '../components/BookingPanel'
+import { BookingReview, BookingConfirmed, EscalationScreen } from '../components/BookingPanel'
 import { typeIcon } from '../apptIcons'
 import { todayISO, thisMonth, monthsAhead } from '../today'
 
@@ -260,6 +260,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     setViewDay(null)
     setBookingError(null)
     setError(null)
+    setCallbackDone(false)
   }
 
   // "Book another appointment": KEEP the booking just made, go start a fresh one.
@@ -322,6 +323,28 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
           onBookAnother={bookAnother}
           onCancel={cancelBookingAndReset}
         />
+        {result && <IntentSummary result={result} providerName={providerName} demo />}
+      </div>
+    )
+  }
+
+  // Emergency / urgent callback takes over the whole page — capture a number so
+  // the office can call back; no self-booking (the callback is the resolution).
+  if (result && result.escalation.callbackRequired) {
+    return (
+      <div className="intake intake--confirmed">
+        <EscalationScreen
+          escalation={result.escalation}
+          contactCaptured={callbackDone}
+          name={patientName}
+          phone={patientPhone}
+          onNameChange={setPatientName}
+          onPhoneChange={(v) => setPatientPhone(formatPhone(v))}
+          sending={callbackBusy}
+          onSendContact={sendCallbackContact}
+          onStartOver={resetToSearch}
+        />
+        <IntentSummary result={result} providerName={providerName} demo />
       </div>
     )
   }
@@ -390,37 +413,6 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
       </section>
 
       {error && <div className="banner banner--error">{error}</div>}
-
-      {result && result.escalation.level !== 'none' && (
-        <section className={`escalation escalation--${result.escalation.level}`} role="alert">
-          <div className="escalation__title">
-            {result.escalation.level === 'emergency' ? '🚨' : '⚠️'} {result.escalation.headline}
-          </div>
-          <p className="escalation__msg">{result.escalation.message}</p>
-          {callbackDone ? (
-            <div className="escalation__contact escalation__contact--ok">
-              ✓ The office has your callback details
-              {result.intent.patientPhone || patientPhone.trim()
-                ? ` — they'll call ${patientName.trim() || 'you'} at ${result.intent.patientPhone || patientPhone.trim()}`
-                : ''}
-              .{result.escalation.matched ? ` · detected “${result.escalation.matched}”` : ''}
-            </div>
-          ) : (
-            <div className="escalation__contact escalation__contact--need">
-              <span className="escalation__tag">
-                📞 So the office can call you back, enter your <strong>name &amp; phone</strong> in Patient details above:
-              </span>
-              <button
-                className="btn btn--primary btn--sm"
-                disabled={callbackBusy || patientPhone.trim().length === 0}
-                onClick={sendCallbackContact}
-              >
-                {callbackBusy ? 'Sending…' : 'Send my number to the office'}
-              </button>
-            </div>
-          )}
-        </section>
-      )}
 
       {result && (
         <>
@@ -564,9 +556,11 @@ function formatPhone(input: string): string {
 function IntentSummary({
   result,
   providerName,
+  demo = false,
 }: {
   result: ScheduleResponse
   providerName: (id: string) => string
+  demo?: boolean
 }) {
   const { intent, pathTaken } = result
   const chips: { label: string; tone?: string }[] = []
@@ -624,6 +618,11 @@ function IntentSummary({
           </span>
         ))}
       </div>
+      {demo && (
+        <p className="intent-demo-note">
+          🛈 demo view — how the assistant read your request · hidden in a real deployment
+        </p>
+      )}
     </section>
   )
 }

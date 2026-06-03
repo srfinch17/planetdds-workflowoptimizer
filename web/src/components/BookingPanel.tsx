@@ -1,4 +1,4 @@
-import { fmtWeekday, fmtDate, fmtTime, type CandidateSlot } from '../api'
+import { fmtWeekday, fmtDate, fmtTime, type CandidateSlot, type Escalation } from '../api'
 import { typeIcon } from '../apptIcons'
 
 function dateLine(slot: CandidateSlot): string {
@@ -98,6 +98,73 @@ export function BookingConfirmed({
           {busy ? 'Cancelling…' : '↺ Cancel this booking & start over'}
         </button>
       </div>
+    </section>
+  )
+}
+
+/**
+ * Full-page takeover for an emergency / urgent callback — the terminal screen
+ * parallel to BookingConfirmed. No booking here: the office calls the patient
+ * back. Captures a phone number if the patient didn't already leave one.
+ */
+export function EscalationScreen({
+  escalation,
+  contactCaptured,
+  name,
+  phone,
+  onNameChange,
+  onPhoneChange,
+  sending,
+  onSendContact,
+  onStartOver,
+}: {
+  escalation: Escalation
+  contactCaptured: boolean
+  name: string
+  phone: string
+  onNameChange: (v: string) => void
+  onPhoneChange: (v: string) => void
+  sending: boolean
+  onSendContact: () => void
+  onStartOver: () => void
+}) {
+  const emergency = escalation.level === 'emergency'
+  const canSend = phone.replace(/\D/g, '').length === 10 && !sending
+  return (
+    <section className={`card escalation-screen escalation--${escalation.level}`} role="alert">
+      <div className="escalation-screen__icon" aria-hidden>
+        {emergency ? '🚨' : '⚠️'}
+      </div>
+      <h3 className="escalation-screen__title">{escalation.headline}</h3>
+      <p className="escalation-screen__msg">{escalation.message}</p>
+
+      {contactCaptured ? (
+        <div className="escalation-screen__ok">
+          ✓ The office has your callback details
+          {phone.trim() ? ` — they’ll call ${name.trim() || 'you'} at ${phone.trim()}` : ''}.
+        </div>
+      ) : (
+        <div className="escalation-screen__capture">
+          <span className="field-label">📞 So the office can call you back, leave your name &amp; number:</span>
+          <div className="escalation-screen__fields">
+            <input value={name} onChange={(e) => onNameChange(e.target.value)} placeholder="Full name" />
+            <input
+              value={phone}
+              onChange={(e) => onPhoneChange(e.target.value)}
+              placeholder="(555) 555 - 5555"
+              inputMode="tel"
+            />
+          </div>
+          <button className="btn btn--primary" onClick={onSendContact} disabled={!canSend}>
+            {sending ? 'Sending…' : 'Send my number to the office'}
+          </button>
+        </div>
+      )}
+
+      {escalation.matched && <p className="escalation-screen__detected">detected “{escalation.matched}”</p>}
+      <button className="btn btn--ghost" onClick={onStartOver} disabled={sending}>
+        ↺ Start over
+      </button>
     </section>
   )
 }
