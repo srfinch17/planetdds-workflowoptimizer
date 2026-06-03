@@ -56,6 +56,13 @@ describe("LlmIntentExtractor", () => {
     expect(intent.preferredProviderId).toBeNull();
   });
 
+  it("does NOT resolve a surname that only appears as a substring (Goldsmith ≠ Smith)", async () => {
+    const json = JSON.stringify({ ...JSON.parse(goodJson), preferredProviderName: "Dr. Goldsmith" });
+    const ex = new LlmIntentExtractor(fakeClient(json), new CostTracker());
+    const intent = await ex.extract("whatever", ctx);
+    expect(intent.preferredProviderId).toBeNull() // whole-word match only
+  });
+
   it("throws LlmExtractionError on non-JSON output", async () => {
     const ex = new LlmIntentExtractor(fakeClient("I cannot help with that."), new CostTracker());
     await expect(ex.extract("hi", ctx)).rejects.toBeInstanceOf(LlmExtractionError);

@@ -52,7 +52,10 @@ export function resolveProviderId(name: string, store: ScheduleStore): string | 
   for (const p of store.getProviders()) {
     const full = p.name.toLowerCase();
     const surname = p.name.split(/\s+/).pop()!.toLowerCase();
-    if (full === needle || needle.includes(surname)) return p.id;
+    // Surname as a whole word (so "Goldsmith" won't match "Smith"), or an exact
+    // full-name match. Mirrors the offline rule parser's word-boundary matcher.
+    const surnameWord = new RegExp(`\\b${surname.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+    if (full === needle || surnameWord.test(needle)) return p.id;
   }
   return null;
 }

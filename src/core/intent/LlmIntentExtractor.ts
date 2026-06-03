@@ -148,7 +148,12 @@ function resolveProviderId(name: string, store: ScheduleStore): string | null {
   for (const p of store.getProviders()) {
     const full = p.name.toLowerCase();
     const surname = p.name.split(/\s+/).pop()!.toLowerCase();
-    if (full === needle || full.includes(needle) || needle.includes(surname)) return p.id;
+    // Match the surname as a WHOLE WORD (so a hallucinated "Goldsmith" can't
+    // resolve to "Smith"), or the full name exactly. The prompt tells the model
+    // to pick from the listed providers; this makes a stray name resolve to
+    // null instead of the nearest substring. Mirrors the rule parser's matcher.
+    const surnameWord = new RegExp(`\\b${surname.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
+    if (full === needle || surnameWord.test(needle)) return p.id;
   }
   return null;
 }
