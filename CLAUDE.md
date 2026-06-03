@@ -97,7 +97,9 @@ TypeScript, Node, `tsx`, Vitest, Zod, `@anthropic-ai/sdk` (Claude Haiku),
 ## How to run
 ```bash
 npm install
-npm run cli -- "Can I come in next Thursday after 3?"   # anchors to today; add --ref=YYYY-MM-DD to pin
+npm run cli -- "Can I come in next Thursday after 3?"   # one-shot; add --ref=YYYY-MM-DD to pin "today"
+#   --mode=mixed (default, rules-first+LLM fallback) | agentic (always LLM) | rules (offline $0)
+#   the CLI runs the SAME tiered stack as the web app (rules+LLM+triage); read-only (no booking)
 npm run scenarios     # four example runs (happy / ambiguous / urgent / emergency)
 npm run eval          # intent-extraction accuracy on a labeled set (offline, $0)
 npm test              # full suite
