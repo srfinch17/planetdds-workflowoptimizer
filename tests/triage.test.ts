@@ -44,6 +44,14 @@ describe("dental-triage Agent Skill", () => {
     expect(e.message).toMatch(/911|emergency room/i);
   });
 
+  it("treats common heavy-bleeding phrasings as an emergency, not just a callback", () => {
+    // "knocked out" alone is a same-day callback, but bad bleeding makes it an
+    // emergency — the bleeding row is checked first and now covers casual wording.
+    expect(assessEscalation("my tooth got knocked out and it's bleeding badly", skill).level).toBe("emergency");
+    expect(assessEscalation("there's lots of blood and it won't stop", skill).level).toBe("emergency");
+    expect(assessEscalation("I'm bleeding a lot from my mouth", skill).level).toBe("emergency");
+  });
+
   it("escalates urgent same-day dental symptoms to level 'callback'", () => {
     const e = assessEscalation("my face is swollen and my tooth is throbbing", skill);
     expect(e.level).toBe("callback");

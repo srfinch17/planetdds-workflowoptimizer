@@ -32,7 +32,7 @@ on whole words. The escalation column is one of:
 | symptoms | urgency | escalation | note |
 | --- | --- | --- | --- |
 | can't breathe, cant breathe, trouble breathing, difficulty breathing, can't swallow, cant swallow, trouble swallowing, difficulty swallowing, airway, throat swelling | urgent | emergency | airway/breathing — possible medical emergency |
-| won't stop bleeding, wont stop bleeding, uncontrolled bleeding, heavy bleeding, bleeding heavily | urgent | emergency | uncontrolled bleeding — possible medical emergency |
+| won't stop bleeding, wont stop bleeding, uncontrolled bleeding, heavy bleeding, bleeding heavily, bleeding badly, bleeding a lot, lots of blood, losing a lot of blood, blood everywhere, gushing | urgent | emergency | uncontrolled bleeding — possible medical emergency |
 | swelling, swollen, abscess, fever, pus, infection | urgent | callback | possible infection — same-day callback |
 | knocked out, avulsed, trauma, broke, broken, cracked, chipped, bleeding | urgent | callback | dental trauma — same-day callback |
 | throbbing, severe, killing, unbearable, excruciating, cannot sleep | urgent | callback | acute pain — same-day callback |
