@@ -67,6 +67,9 @@ consistent and explainable. Mock data is JSON.
 - **Explainable:** explanations are generated FROM the scoring factors → always faithful.
 - **Emergency safety:** a request that reads as a medical emergency escalates
   *before* scheduling and forces a staff callback — deterministic, works offline.
+  The callback captures the patient's name/phone (from the request text or the
+  details bar); if none was given, the banner prompts the patient for a number
+  (`POST /api/callbacks/contact`) so the office is never left with no one to call.
 - **Measured, not asserted:** `npm run eval` scores the deterministic extractor
   against a labeled set (`src/eval/cases.json`) and reports field-level accuracy —
   a regression guard for parsing, and an honest picture of where the LLM tier earns
