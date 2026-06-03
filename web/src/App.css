@@ -2121,7 +2121,11 @@ button.cal-block--hl:hover {
   font-size: 13px;
   color: var(--ink-soft);
 }
-.booking-confirmed .btn--danger-outline {
+.booking-confirmed__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(320px, 100%);
   margin-top: 8px;
 }
 /* confirmed booking is the whole page — give the lone panel breathing room */

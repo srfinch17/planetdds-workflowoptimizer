@@ -249,16 +249,9 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     }
   }
 
-  // The confirmed panel's "Cancel & start over": really cancel the appointment
-  // (frees the slot) and reset to a clean search. Keep the patient's name/phone.
-  async function cancelBookingAndReset() {
-    if (!confirmed) return
-    setBookingBusy(true)
-    try {
-      await postCancel(confirmed.appointmentId, confirmed.patientId)
-    } catch {
-      /* reset the view even if the cancel call fails */
-    }
+  // Back to a clean search. The patient's name/phone are kept so booking a few
+  // in a row (great for demoing/testing) stays quick.
+  function resetToSearch() {
     setConfirmed(null)
     setPendingBooking(null)
     setResult(null)
@@ -267,6 +260,23 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     setViewDay(null)
     setBookingError(null)
     setError(null)
+  }
+
+  // "Book another appointment": KEEP the booking just made, go start a fresh one.
+  function bookAnother() {
+    resetToSearch()
+  }
+
+  // "Cancel & start over": really cancel the appointment (frees the slot), then reset.
+  async function cancelBookingAndReset() {
+    if (!confirmed) return
+    setBookingBusy(true)
+    try {
+      await postCancel(confirmed.appointmentId, confirmed.patientId)
+    } catch {
+      /* reset the view even if the cancel call fails */
+    }
+    resetToSearch()
     setBookingBusy(false)
   }
 
@@ -309,6 +319,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
           providerName={providerName(confirmed.slot.providerId)}
           confirmationNumber={confirmed.confirmationNumber}
           busy={bookingBusy}
+          onBookAnother={bookAnother}
           onCancel={cancelBookingAndReset}
         />
       </div>

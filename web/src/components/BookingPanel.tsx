@@ -63,13 +63,15 @@ export function BookingConfirmed({
   providerName,
   confirmationNumber,
   busy,
+  onBookAnother,
   onCancel,
 }: {
   slot: CandidateSlot
   providerName: string
   confirmationNumber: string
   busy: boolean
-  onCancel: () => void
+  onBookAnother: () => void // keep this booking, go start a fresh one
+  onCancel: () => void // cancel this booking and start over
 }) {
   return (
     <section className="card booking-confirmed">
@@ -88,9 +90,14 @@ export function BookingConfirmed({
       <p className="booking-confirmed__reminder">
         📱 We’ll text you a reminder one hour before your appointment.
       </p>
-      <button className="btn btn--danger-outline" onClick={onCancel} disabled={busy}>
-        {busy ? 'Cancelling…' : '↺ Cancel this booking & start over'}
-      </button>
+      <div className="booking-confirmed__actions">
+        <button className="btn btn--primary" onClick={onBookAnother} disabled={busy}>
+          ➕ Book another appointment
+        </button>
+        <button className="btn btn--danger-outline" onClick={onCancel} disabled={busy}>
+          {busy ? 'Cancelling…' : '↺ Cancel this booking & start over'}
+        </button>
+      </div>
     </section>
   )
 }
