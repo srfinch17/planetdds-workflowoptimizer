@@ -21,3 +21,6 @@ Thumbs.db
 
 # Never commit the assignment doc or any Word docs
 *.docx
+
+# Local demo-prep notes — personal study/QA material, NOT part of the deliverable
+DemoQA/
