@@ -21,6 +21,10 @@ interface CallbackRecord {
   level: EscalationLevel;
   headline: string;
   matched: string | null;
+  // WHO to call back. Captured from the request text or the patient-details bar;
+  // null when the patient didn't leave contact info (the UI then prompts for it).
+  patientName: string | null;
+  patientPhone: string | null;
   createdAt: string;
 }
 
@@ -75,6 +79,9 @@ export function createApp(deps: AppDeps): Hono {
     }
     const refDate = typeof body.refDate === "string" ? body.refDate : undefined;
     const mode = body.mode === "llm" || body.mode === "rules" ? body.mode : undefined;
+    // The patient-details bar (if filled) — used as a fallback callback contact.
+    const bodyName = typeof body.patientName === "string" && body.patientName.trim() ? body.patientName.trim() : null;
+    const bodyPhone = typeof body.patientPhone === "string" && body.patientPhone.trim() ? body.patientPhone.trim() : null;
 
     const costBefore = costTracker.usd;
     const callsBefore = costTracker.totals.calls;
@@ -109,13 +116,20 @@ export function createApp(deps: AppDeps): Hono {
 
     // Emergency override: a request flagged for callback is queued for staff
     // immediately, so the office knows to phone the patient back ASAP.
+    let callbackId: string | null = null;
     if (escalation.callbackRequired) {
+      callbackId = `cb-${Date.now()}`;
       callbacks.unshift({
-        id: `cb-${Date.now()}`,
+        id: callbackId,
         request,
         level: escalation.level,
         headline: escalation.headline,
         matched: escalation.matched,
+        // Who to call: prefer what the patient SAID in the request, then the
+        // patient-details bar. Null when neither — the UI prompts them for it so
+        // a callback is never queued with no way to reach the patient.
+        patientName: intent.patientName ?? bodyName,
+        patientPhone: intent.patientPhone ?? bodyPhone,
         createdAt: new Date().toISOString(),
       });
       // Separate immutable audit event for the safety trail, linked to the request.
@@ -133,6 +147,9 @@ export function createApp(deps: AppDeps): Hono {
       pathTaken: tiered.lastPath,
       escalation,
       requestId: scheduleEvent.id,
+      // Set when this request queued a callback, so the patient can attach their
+      // contact info to it (POST /api/callbacks/contact) if they didn't state it.
+      callbackId,
       // Present for cancel/reschedule: who we matched + their upcoming appointments.
       patientMatch: patientMatch ?? null,
       appointments: appointments ?? null,
@@ -142,6 +159,23 @@ export function createApp(deps: AppDeps): Hono {
   // The staff callback queue (newest first) — the office's emergency worklist.
   app.get("/api/callbacks", (c) => {
     return c.json({ callbacks });
+  });
+
+  // Attach (or correct) the patient's contact info on a queued callback — for
+  // when an escalation fired before the patient gave a name/number, so staff
+  // still know who to call. Idempotent; callable again to fix a typo.
+  app.post("/api/callbacks/contact", async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const id = typeof body.id === "string" ? body.id : "";
+    const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
+    const phone = typeof body.phone === "string" && body.phone.trim() ? body.phone.trim() : null;
+    if (!id) return c.json({ error: "id is required" }, 400);
+    if (!name && !phone) return c.json({ error: "a name or phone is required" }, 400);
+    const cb = callbacks.find((x) => x.id === id);
+    if (!cb) return c.json({ error: "no callback with that id" }, 404);
+    if (name) cb.patientName = name;
+    if (phone) cb.patientPhone = phone;
+    return c.json({ ok: true, callbacks });
   });
 
   // Open slots for booking, grouped by day. Same candidate generator the

@@ -237,6 +237,67 @@ describe("Hono backend API", () => {
     expect(queue.callbacks.length).toBe(0);
   });
 
+  it("a queued callback captures the patient's name/phone from the request body (who to call)", async () => {
+    const res = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        request: "my tooth broke off, when can I come in?",
+        refDate: "2026-06-04",
+        patientName: "Bart Simpson",
+        patientPhone: "949-555-0142",
+      }),
+    });
+    const body = (await res.json()) as any;
+    expect(body.escalation.callbackRequired).toBe(true);
+    expect(body.callbackId).toBeTruthy(); // returned so the patient can attach contact later
+
+    const queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks[0].patientName).toBe("Bart Simpson");
+    expect(queue.callbacks[0].patientPhone).toBe("949-555-0142");
+  });
+
+  it("a queued callback captures contact stated IN the request text", async () => {
+    await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        request: "this is Bart Simpson, 949-555-0142, my tooth broke off",
+        refDate: "2026-06-04",
+      }),
+    });
+    const queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks[0].patientName).toBe("Bart Simpson");
+    expect(queue.callbacks[0].patientPhone).toBe("949-555-0142");
+  });
+
+  it("POST /api/callbacks/contact attaches contact to a callback that was queued blind", async () => {
+    // The reported bug: an escalation with NO name/phone leaves staff with no one to call.
+    const sched = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "my tooth broke off, when can I come in?", refDate: "2026-06-04" }),
+    });
+    const body = (await sched.json()) as any;
+    expect(body.escalation.callbackRequired).toBe(true);
+    const id = body.callbackId as string;
+    expect(id).toBeTruthy();
+
+    let queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks[0].patientPhone).toBeNull(); // queued blind — nobody to call yet
+
+    const attach = await app.request("/api/callbacks/contact", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, name: "Homer Simpson", phone: "949-555-0143" }),
+    });
+    expect(attach.status).toBe(200);
+
+    queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks[0].patientName).toBe("Homer Simpson");
+    expect(queue.callbacks[0].patientPhone).toBe("949-555-0143");
+  });
+
   it("POST /api/rules parses a sentence (offline regex) and adds the rule", async () => {
     const before = (await (await app.request("/api/state")).json()) as any;
     const res = await app.request("/api/rules", {

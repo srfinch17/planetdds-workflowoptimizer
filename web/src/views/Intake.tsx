@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   postSchedule,
+  postCallbackContact,
   getState,
   postBook,
   getAvailability,
@@ -53,7 +54,12 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const [viewDay, setViewDay] = useState<string | null>(null) // day shown in the detail grid
   const [daySlots, setDaySlots] = useState<Record<string, CandidateSlot[]>>({}) // open slots per day
   const [selectableDays, setSelectableDays] = useState<Set<string> | null>(null) // null = no restriction
-  const nameRef = useRef<HTMLInputElement>(null) // focused when a booking needs patient details
+  // Callback contact: when a request escalates to a staff callback, the office
+  // needs a number. `callbackDone` is true once we have one (stated, in the bar,
+  // or just sent); otherwise the escalation banner prompts for it.
+  const [callbackDone, setCallbackDone] = useState(false)
+  const [callbackBusy, setCallbackBusy] = useState(false)
+  const nameRef = useRef<HTMLInputElement>(null) // focused when a booking/callback needs patient details
 
   const loadState = useCallback(() => {
     getState()
@@ -79,13 +85,29 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     setBooked({})
     setDaySlots({})
     setSelectableDays(null)
+    setCallbackDone(false)
     try {
-      const res = await postSchedule(request.trim(), TODAY, mode)
+      // Send the patient bar too — if this escalates to a callback, the server
+      // uses it as the contact to call back.
+      const res = await postSchedule(request.trim(), TODAY, mode, {
+        name: patientName.trim() || undefined,
+        phone: patientPhone.trim() || undefined,
+      })
       setResult(res)
       // If the patient stated their name/phone in the request, pre-fill the
       // booking form; otherwise leave it for them to type.
       if (res.intent.patientName) setPatientName(res.intent.patientName)
       if (res.intent.patientPhone) setPatientPhone(res.intent.patientPhone)
+      // A callback needs a number to be actionable. We've captured one if it was
+      // stated in the request or already in the bar; otherwise prompt for it.
+      if (res.escalation.callbackRequired) {
+        const haveNumber = !!(res.intent.patientPhone || patientPhone.trim())
+        setCallbackDone(haveNumber)
+        if (!haveNumber) {
+          nameRef.current?.focus()
+          nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }
       const recDay = res.recommendation.slots[0]?.slot.start.slice(0, 10) ?? res.intent.earliestDate ?? TODAY
       setViewDay(recDay)
       await loadAvailability(res, recDay)
@@ -93,6 +115,26 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Attach the patient's contact info to the queued callback (when an emergency
+  // fired before they left a number). Uses the patient-details bar values.
+  async function sendCallbackContact() {
+    if (!result?.callbackId) return
+    if (!patientPhone.trim()) {
+      nameRef.current?.focus()
+      return
+    }
+    setCallbackBusy(true)
+    setError(null)
+    try {
+      await postCallbackContact(result.callbackId, patientName.trim(), patientPhone.trim())
+      setCallbackDone(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCallbackBusy(false)
     }
   }
 
@@ -261,10 +303,28 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
             {result.escalation.level === 'emergency' ? '🚨' : '⚠️'} {result.escalation.headline}
           </div>
           <p className="escalation__msg">{result.escalation.message}</p>
-          <div className="escalation__tag">
-            📞 Flagged for staff callback
-            {result.escalation.matched ? ` · detected “${result.escalation.matched}”` : ''}
-          </div>
+          {callbackDone ? (
+            <div className="escalation__contact escalation__contact--ok">
+              ✓ The office has your callback details
+              {result.intent.patientPhone || patientPhone.trim()
+                ? ` — they'll call ${patientName.trim() || 'you'} at ${result.intent.patientPhone || patientPhone.trim()}`
+                : ''}
+              .{result.escalation.matched ? ` · detected “${result.escalation.matched}”` : ''}
+            </div>
+          ) : (
+            <div className="escalation__contact escalation__contact--need">
+              <span className="escalation__tag">
+                📞 So the office can call you back, enter your <strong>name &amp; phone</strong> in Patient details above:
+              </span>
+              <button
+                className="btn btn--primary btn--sm"
+                disabled={callbackBusy || patientPhone.trim().length === 0}
+                onClick={sendCallbackContact}
+              >
+                {callbackBusy ? 'Sending…' : 'Send my number to the office'}
+              </button>
+            </div>
+          )}
         </section>
       )}
 

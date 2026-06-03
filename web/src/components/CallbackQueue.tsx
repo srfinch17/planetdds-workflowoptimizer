@@ -22,6 +22,16 @@ export function CallbackQueue({ callbacks }: { callbacks: CallbackRecord[] }) {
                 </span>
                 <span className="cb-time">{new Date(cb.createdAt).toLocaleTimeString()}</span>
               </div>
+              {cb.patientName || cb.patientPhone ? (
+                <p className="cb-contact">
+                  📞 <strong>{cb.patientName ?? 'Name not given'}</strong>
+                  {cb.patientPhone ? ` · ${cb.patientPhone}` : ' · no number on file'}
+                </p>
+              ) : (
+                <p className="cb-contact cb-contact--missing">
+                  ⚠️ No callback number — patient hasn’t left contact info yet.
+                </p>
+              )}
               <p className="cb-request">“{cb.request}”</p>
               {cb.matched && <span className="tile-sub">detected: {cb.matched}</span>}
             </li>

@@ -594,6 +594,22 @@
   font-weight: 600;
   color: var(--ink-soft);
 }
+/* callback contact prompt / confirmation inside the escalation banner */
+.escalation__contact {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.escalation__contact--need .escalation__tag {
+  margin-top: 0;
+}
+.escalation__contact--ok {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--good);
+}
 
 /* ---------- callback queue ---------- */
 
@@ -646,6 +662,15 @@
 .cb-request {
   margin: 6px 0 0;
   font-size: 13.5px;
+}
+.cb-contact {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+.cb-contact--missing {
+  color: var(--bad);
+  font-weight: 600;
 }
 .pill--warn {
   background: var(--warn-bg);

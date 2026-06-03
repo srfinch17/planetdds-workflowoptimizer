@@ -87,6 +87,9 @@ export interface ScheduleResponse {
   pathTaken: IntentPath
   escalation: Escalation
   requestId: string
+  // Set when this request queued a staff callback — lets the patient attach
+  // their contact info to it if they didn't state a name/phone.
+  callbackId: string | null
   // Present for cancel/reschedule requests.
   patientMatch: PatientMatch | null
   appointments: AppointmentSummary[] | null
@@ -126,6 +129,8 @@ export interface CallbackRecord {
   level: EscalationLevel
   headline: string
   matched: string | null
+  patientName: string | null // who to call back (null = no contact left yet)
+  patientPhone: string | null
   createdAt: string
 }
 
@@ -230,12 +235,29 @@ export function postSchedule(
   request: string,
   refDate?: string,
   mode?: ExtractionMode,
+  patient?: { name?: string; phone?: string },
 ): Promise<ScheduleResponse> {
   return fetch('/api/schedule', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ request, refDate, mode }),
+    // Send the patient-details bar too: if a request escalates to a callback,
+    // the server uses it as the contact to call back.
+    body: JSON.stringify({ request, refDate, mode, patientName: patient?.name, patientPhone: patient?.phone }),
   }).then((r) => jsonOrThrow<ScheduleResponse>(r))
+}
+
+// Attach the patient's contact info to a queued callback (when an escalation
+// fired before they gave a name/number).
+export function postCallbackContact(
+  id: string,
+  name: string,
+  phone: string,
+): Promise<{ ok: boolean; callbacks: CallbackRecord[] }> {
+  return fetch('/api/callbacks/contact', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id, name, phone }),
+  }).then((r) => jsonOrThrow(r))
 }
 
 export function getState(): Promise<StateResponse> {
