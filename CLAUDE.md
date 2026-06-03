@@ -44,9 +44,11 @@ consistent and explainable. Mock data is JSON.
    sentence into a rule. A real Anthropic **Agent Skill** (dental-triage) supplies
    **fuzzy clinical judgment** (urgency + emergency escalation), never hard rules.
    Clinical eligibility is data too (`appointmentTypes.json`): each type declares
-   the `eligibleRoles` / `requiredSpecialty` / `requiredEquipment` it needs, so a
-   hygienist never surfaces for an extraction and an extraction only books into an
-   X-ray-equipped operatory — enforced in the candidate generator, not hardcoded.
+   the `eligibleRoles` / `requiredSpecialty` / `requiredEquipment` it needs, so an
+   extraction only books with a provider who has the extraction specialty (Dr. Smith)
+   AND into an X-ray-equipped operatory — enforced in the candidate generator, not
+   hardcoded. (All three providers are dentists by design for this demo; the
+   role-eligibility path is kept and proven via a synthetic-hygienist test.)
 3. **Offline mode:** the rule-based parser IS the offline path (graceful
    degradation via the Tiered extractor). `chrono-node` does deterministic date parsing.
 
@@ -226,20 +228,32 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   the candidate generator indexes appointments by day to stay fast against a full year.
 
 ## Current status
-**Feature-complete.** 112 tests passing, `npm run typecheck` clean, web build clean.
-Implemented: CLI core; Zod validation; tiered/offline intent + a per-request engine-mode
-switch (agentic / mixed / rules); Hono backend; React UI (three tabs — intake + month +
-day calendars + admin + metrics — with theming, custom dropdowns, per-dentist color-coding,
-and per-type icons); provider-preference
-grouping; booking with patient name/phone + confirmation numbers; cost/efficiency metrics;
-plain-English rule teaching with add/remove workdays + office-wide closures + a reschedule
-queue + view/delete/reset; dental-triage Agent Skill; emergency escalation with a staff
-callback queue; data-driven clinical eligibility (role + specialty + operatory equipment per
-appointment type, so a hygienist never surfaces for an extraction and imaging procedures
-only book into X-ray rooms); prompt-injection containment + an offline extraction-accuracy
-eval (`npm run eval`); a year of mock scheduling data with type-driven durations; and an
-append-only event log (`EventLog` port) surfaced as an observability API (`/api/logs`,
-stats, replay, export, reset) with a Metrics activity panel.
+**Feature-complete + hardened.** 143 tests passing, `npm run typecheck` clean, web build clean.
+
+**Patient Intake** is a confirm-first booking state machine: ranked, explainable cards (with
+**color-coded dentist names** matching the calendar) → a **Review** step (nothing booked until
+Confirm) → a full-page **"You're booked!"** confirmation (with "Book another" / "Cancel &
+start over"). For an emergency/urgent callback it instead shows a full-page **safety takeover**
+that captures the patient's name + number for the staff callback queue (no self-booking). The
+patient-facing calendar is **privacy-first**: only green "book" / red "unavailable", all clinical
+detail confined to Admin. Phone input is masked to `(xxx) xxx - xxxx`. A demo-only **"Understood
+as"** panel surfaces the parsed intent + tier + confidence on the terminal screens.
+
+**Admin:** live calendar, plain-English rule teaching (add/remove workdays, lunch blocks,
+office-wide closures + a reschedule queue), view/delete/reset, an **emergency callback queue**
+(now with the patient's captured contact), and **direct booking from the day grid**.
+
+**Engine:** CLI with a per-request engine-mode switch (agentic / mixed / rules, also `npm run
+cli --mode=`); Zod-validated tiered/offline intent; provider-preference grouping; cost/efficiency
+metrics; dental-triage Agent Skill; data-driven clinical eligibility — **all three providers are
+dentists by design** (the role-eligibility machinery is intact and covered by a synthetic-
+hygienist test; extractions still require the extraction specialty + an X-ray room); prompt-
+injection containment; offline extraction-accuracy eval (`npm run eval`, 97.6%); ~a year of mock
+data with type-driven durations; append-only event log surfaced as an observability API + Metrics
+panel.
+
+**Known open item:** the cancel/reschedule UI is still the older inline layout, not yet the
+full-page-takeover treatment the booking + emergency flows got — the next consistency pass.
 
 ## Known simplifications (intentional)
 - The `/api/logs/replay` metric-restore assumes a single user (no request firing
