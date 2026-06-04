@@ -142,6 +142,37 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
       };
     }
 
+    // A BARE MONTH NAME ("August", "in August", "mid August"). chrono pins it to
+    // the 1st of the month and SILENTLY DROPS any "early/mid/late" qualifier, so
+    // without this it would resolve to a single day (often a weekend with no
+    // hours) and the reasoning agent would best-effort fall back to ~today — i.e.
+    // "mid August" returns June. Detect it (month is certain; day, weekday and
+    // year are not — which also distinguishes it from "next month", where the
+    // year IS certain) and search the whole month, or the requested third of it.
+    if (
+      first.start.isCertain("month") &&
+      !first.start.isCertain("day") &&
+      !first.start.isCertain("weekday") &&
+      !first.start.isCertain("year")
+    ) {
+      const d = first.start.date();
+      const year = d.getFullYear();
+      const monthIdx = d.getMonth(); // 0-based
+      const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+      const third = monthThird(request.toLowerCase(), first.text.toLowerCase());
+      let firstDay = 1;
+      let lastDay = daysInMonth;
+      if (third === "early") lastDay = Math.min(10, daysInMonth);
+      else if (third === "mid") (firstDay = 11), (lastDay = Math.min(20, daysInMonth));
+      else if (third === "late") firstDay = 21;
+      const mm = String(monthIdx + 1).padStart(2, "0");
+      let earliest = `${year}-${mm}-${String(firstDay).padStart(2, "0")}`;
+      const latest = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
+      // Never search into the past for a bare current-month reference.
+      if (earliest < ctx.refDate && ctx.refDate <= latest) earliest = ctx.refDate;
+      return { earliestDate: earliest, latestDate: latest, daysOfWeek: [], dateResolved: true };
+    }
+
     // A relative SPAN ("next week"/"next month") points at the start of the
     // span — widen latestDate and DON'T constrain the weekday, so the whole
     // span is searched. Bare single days ("today"/"tomorrow") stay one day.
@@ -266,6 +297,19 @@ function parseProvider(text: string, store: ScheduleStore): string | null {
 }
 
 // --- helpers ---
+
+/**
+ * Which third of a named month did the patient ask for? chrono discards the
+ * "early/mid/late" qualifier, so we recover it from the original text by looking
+ * for the modifier sitting next to the month name. Returns null for a bare month.
+ */
+function monthThird(lowerRequest: string, monthName: string): "early" | "mid" | "late" | null {
+  const m = monthName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (new RegExp(`\\b(?:early|beginning|start|first half)(?:\\s+of)?\\s+(?:the\\s+)?${m}`).test(lowerRequest)) return "early";
+  if (new RegExp(`\\b(?:mid|middle|halfway)(?:\\s+(?:of|through))?\\s*-?\\s*${m}`).test(lowerRequest)) return "mid";
+  if (new RegExp(`\\b(?:late|end|second half)(?:\\s+of)?\\s+(?:the\\s+)?${m}`).test(lowerRequest)) return "late";
+  return null;
+}
 
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

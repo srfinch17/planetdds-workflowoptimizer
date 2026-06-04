@@ -111,6 +111,27 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect(intent.confidence).toBeLessThan(0.6); // below the escalation threshold
   });
 
+  it("widens a bare month name to the whole month (not a single day)", () => {
+    // "in August" must search all of August, not pin Aug 1 (a Saturday with no
+    // hours) and best-effort fall back to ~today. Regression: "mid August" → June.
+    const intent = extractor.extract("a checkup in August", ctx);
+    expect(intent.earliestDate).toBe("2026-08-01");
+    expect(intent.latestDate).toBe("2026-08-31");
+    expect(intent.daysOfWeek).toEqual([]);
+    expect(intent.confidence).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it("honors early/mid/late within a named month", () => {
+    const early = extractor.extract("a cleaning in early August", ctx);
+    expect([early.earliestDate, early.latestDate]).toEqual(["2026-08-01", "2026-08-10"]);
+
+    const mid = extractor.extract("I'd like a cleaning sometime in mid August", ctx);
+    expect([mid.earliestDate, mid.latestDate]).toEqual(["2026-08-11", "2026-08-20"]);
+
+    const late = extractor.extract("a cleaning late August", ctx);
+    expect([late.earliestDate, late.latestDate]).toEqual(["2026-08-21", "2026-08-31"]);
+  });
+
   it("maps 'before noon' to a latest time and 'morning' to partOfDay", () => {
     const a = extractor.extract("something before noon next Tuesday", ctx);
     expect(a.timeLatest).toBe("12:00");
