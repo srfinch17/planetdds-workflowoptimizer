@@ -74,6 +74,17 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
       confidence = patientName !== null || patientPhone !== null ? 0.9 : 0.3;
     }
 
+    // A booking request where the patient clearly SELF-IDENTIFIES (left a phone
+    // number, or a "this is …" / "my name is …" lead) but we couldn't parse a
+    // NAME deterministically — a lowercase or voice-garbled name the capitalized
+    // regex misses. We're not actually confident, even if date/time/provider all
+    // resolved: cap below the escalation threshold so the tiered router lets the
+    // LLM recover the name (and phone). Offline, this simply degrades to manual
+    // entry — the LLM is the best-effort path, never a hard requirement.
+    if (action === "book" && patientName === null && selfIdentifies(request)) {
+      confidence = Math.min(confidence, 0.5);
+    }
+
     return {
       action,
       appointmentType,
@@ -246,10 +257,37 @@ function parseAction(text: string): SchedulingAction {
  * a capitalized name can be told apart from ordinary words — that's what keeps
  * "this is killing me" from being read as a name.
  */
+// A US-style 10-digit number, optional country code + separators. The strict
+// 3-3-4 grouping means a bare date like "2026-07-21" can't masquerade as one,
+// and a PARTIAL number (too few digits) won't match at all — so a phone is only
+// captured when it's complete, exactly the "easy to test for completeness" rule.
+const PHONE_RE = /(?:\+?\d{1,2}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
+
+// Words that commonly follow "this is …" / "i'm …" but are NOT names — so
+// "this is killing me" / "this is urgent" / "this is an emergency" don't read as
+// a self-identification. (A real lowercase name like "scott" isn't in here.)
+const NON_NAME_AFTER_CUE = new Set([
+  "killing", "hurting", "really", "very", "so", "an", "a", "the", "going", "getting",
+  "calling", "having", "in", "out", "here", "there", "urgent", "fine", "good", "bad",
+  "not", "my", "your", "for", "about", "gonna", "just", "still", "kind", "sort",
+]);
+
+/**
+ * Does the patient appear to be SELF-IDENTIFYING — leaving contact details we
+ * should try to capture? A complete phone number is an unambiguous signal; so is
+ * a "this is …" / "my name is …" lead followed by a plausible name token (not a
+ * symptom/filler word). Used to decide whether to let the LLM recover a name the
+ * deterministic parser couldn't (lowercase, voice-garbled). Conservative on the
+ * name cue to avoid escalating non-identifying phrases.
+ */
+function selfIdentifies(request: string): boolean {
+  if (PHONE_RE.test(request)) return true;
+  const m = request.match(/\b(?:this is|my name is|i['’]?m|i am|name['’]?s|name is)\s+([A-Za-z][\w'’.-]*)/i);
+  return m ? !NON_NAME_AFTER_CUE.has(m[1]!.toLowerCase()) : false;
+}
+
 function parsePatient(request: string): { patientName: string | null; patientPhone: string | null } {
-  // A US-style 10-digit number, optional country code + separators. The strict
-  // 3-3-4 grouping means a bare date like "2026-07-21" can't masquerade as one.
-  const phone = request.match(/(?:\+?\d{1,2}[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+  const phone = request.match(PHONE_RE);
   const patientPhone = phone ? phone[0].trim() : null;
 
   // An intro phrase ("this is", "my name is", "I'm") followed by 1-3 Capitalized

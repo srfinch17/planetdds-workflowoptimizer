@@ -132,6 +132,36 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect([late.earliestDate, late.latestDate]).toEqual(["2026-08-21", "2026-08-31"]);
   });
 
+  it("escalates a self-identified booking when it can't parse the NAME (lets the LLM recover it)", () => {
+    // Full name + phone given, but the name is lowercase so the capitalized-name
+    // regex misses it. Even with date/provider/time resolved, confidence must
+    // drop below the escalation threshold so the LLM can recover the name.
+    const intent = extractor.extract(
+      "this is scott finch at 2227778888 i need an appointment with dr pana in mid october in the mornings",
+      ctx,
+    );
+    expect(intent.patientName).toBeNull(); // rules genuinely couldn't get it
+    expect(intent.patientPhone).toBe("2227778888"); // but the phone is complete
+    expect(intent.confidence).toBeLessThan(0.6); // → tiered router escalates
+  });
+
+  it("does NOT escalate when the self-identified name is already parsed", () => {
+    // A capitalized name the rules DO get needs no LLM — stay on the free path.
+    const intent = extractor.extract(
+      "This is Scott Finch at 2227778888, an appointment with Dr. Pana mid October mornings",
+      ctx,
+    );
+    expect(intent.patientName).toBe("Scott Finch");
+    expect(intent.confidence).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it("does NOT treat a non-name 'this is …' phrase as self-identification", () => {
+    // "this is killing me" must not trigger a name-recovery escalation.
+    const intent = extractor.extract("this is killing me, can I come in next Thursday after 3", ctx);
+    expect(intent.patientName).toBeNull();
+    expect(intent.confidence).toBeGreaterThanOrEqual(0.6);
+  });
+
   it("maps 'before noon' to a latest time and 'morning' to partOfDay", () => {
     const a = extractor.extract("something before noon next Tuesday", ctx);
     expect(a.timeLatest).toBe("12:00");
