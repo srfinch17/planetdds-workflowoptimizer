@@ -18,7 +18,7 @@ export type RuleDraft = Omit<AvailabilityRule, "id">;
 export const llmRuleSchema = z
   .object({
     providerName: z.string().min(1), // for a closure the LLM uses "office"
-    kind: z.enum(["block", "dayoff", "workday", "closure"]),
+    kind: z.enum(["block", "dayoff", "workday", "closure", "timeoff"]),
     recurrence: z.enum(["daily"]).nullish(),
     weekday: z.enum(WEEKDAYS).nullish(),
     start: z.string().regex(HHMM).nullish(),
@@ -38,6 +38,9 @@ export const llmRuleSchema = z
   })
   .refine((r) => r.kind !== "closure" || (!!r.startDate && !!r.endDate), {
     message: "a closure rule requires startDate and endDate",
+  })
+  .refine((r) => r.kind !== "timeoff" || !!r.startDate, {
+    message: "a time-off adjustment requires a date (startDate)",
   });
 
 export type LlmRuleDraft = z.infer<typeof llmRuleSchema>;
@@ -114,6 +117,17 @@ function draftFrom(d: LlmRuleDraft, providerId: string): RuleDraft {
       rule.end = d.end;
     }
     return rule;
+  }
+  if (d.kind === "timeoff") {
+    // A one-time, single-provider absence on a specific date (or range). A bare
+    // single date collapses to a one-day window (endDate defaults to startDate).
+    return {
+      providerId,
+      kind: "timeoff",
+      startDate: d.startDate!,
+      endDate: d.endDate ?? d.startDate!,
+      reason: d.reason?.trim() || "time off",
+    };
   }
   return {
     providerId,

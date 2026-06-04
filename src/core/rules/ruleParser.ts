@@ -42,8 +42,26 @@ export function regexParseRule(sentence: string, store: ScheduleStore): RuleDraf
   const providerId = findProvider(text, store);
   if (!providerId) return null;
 
-  // --- day off: "never works Fridays", "is off on Mondays", "doesn't work Fri" ---
-  if (/\b(never works?|doesn'?t work|does not work|off on|out on|no hours|not in)\b/.test(text)) {
+  // --- provider absence. Two shapes share one trigger:
+  //   a SPECIFIC DATE ("off June 11", "out Aug 3-5", "off next Monday") → a
+  //     one-time `timeoff` ADJUSTMENT (clears that day's appts to be rebooked).
+  //   a recurring WEEKDAY ("never works Fridays", "off on Mondays") → a `dayoff`
+  //     RULE.
+  // The presence of a calendar date is what distinguishes an adjustment from a
+  // standing rule — exactly the rule-vs-adjustment call. ---
+  if (/\b(never works?|doesn'?t work|does not work|not working|won'?t be (?:in|working)|off\b|out\b|away\b|on leave|on vacation|on holiday|vacation|holidays?|out sick|sick|unavailable|no hours|not in)\b/.test(text)) {
+    // A concrete date (range) beats a recurring weekday — it's the more specific
+    // instruction and the one the admin clearly means by naming a date.
+    const range = parseSpecificDate(sentence);
+    if (range) {
+      return {
+        providerId,
+        kind: "timeoff",
+        startDate: range.start,
+        endDate: range.end,
+        reason: timeOffReason(text),
+      };
+    }
     const weekday = findWeekday(text);
     if (weekday) {
       return { providerId, kind: "dayoff", weekday, reason: `off on ${weekday}` };
@@ -155,6 +173,40 @@ function labelFor(text: string): string {
   return "blocked";
 }
 
+// Matches a bare weekday word, singular or plural ("Friday", "Fridays") — the
+// signal of a RECURRING day-off rather than a one-time dated absence.
+const BARE_WEEKDAY =
+  /^(?:mon(?:day)?|tue(?:s|sday)?|wed(?:s|nesday)?|thu(?:r|rs|rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)s?$/;
+
+/**
+ * Parse a SPECIFIC calendar date or range for a one-time time-off ("June 11",
+ * "Aug 3 to 5", "next Monday", "tomorrow"). Returns null when the only date
+ * signal is a bare recurring weekday ("Fridays") or an "every/each" phrase —
+ * those are recurring rules, not dated adjustments. Anchored to today.
+ */
+function parseSpecificDate(sentence: string): { start: string; end: string } | null {
+  if (/\b(every|each)\b/.test(sentence.toLowerCase())) return null; // recurring
+  const results = chrono.parse(sentence, new Date(), { forwardDate: true });
+  if (results.length === 0) return null;
+  const r = results[0]!;
+  // "Fridays" alone → recurring; "next Friday" / "June 11" carry more → dated.
+  if (BARE_WEEKDAY.test(r.text.toLowerCase().trim())) return null;
+  const start = localDate(r.start.date());
+  const end = r.end ? localDate(r.end.date()) : start;
+  return { start, end };
+}
+
+/** A reason for a time-off: an explicit "for …", else a known absence keyword. */
+function timeOffReason(text: string): string {
+  const m = text.match(/\bfor\s+(?:a\s+|an\s+|the\s+)?([a-z][a-z\s'-]{2,40})/);
+  if (m) return m[1]!.trim();
+  if (/\bvacation\b/.test(text)) return "vacation";
+  if (/\bsick\b/.test(text)) return "out sick";
+  if (/\bholidays?\b/.test(text)) return "holiday";
+  if (/\bleave\b/.test(text)) return "on leave";
+  return "time off";
+}
+
 /** Parse a closure date range with chrono ("Aug 4 to 6", "August 4"). */
 function parseClosureDates(sentence: string): { start: string; end: string } | null {
   const results = chrono.parse(sentence, new Date(), { forwardDate: true });
@@ -193,14 +245,17 @@ function buildSystemPrompt(store: ScheduleStore): string {
     .join("\n");
   return [
     "You convert one English sentence from a dental-office admin into a single scheduling rule.",
+    `Today is ${new Date().toISOString().slice(0, 10)}. Resolve relative dates ("next Monday", "tomorrow") against it.`,
     "Return ONLY a JSON object, no prose. Shape:",
-    '{ "providerName": string, "kind": "block" | "dayoff", "recurrence": "daily" | null,',
-    '  "weekday": "Mon|Tue|Wed|Thu|Fri|Sat|Sun" | null, "start": "HH:mm" | null,',
-    '  "end": "HH:mm" | null, "reason": string }',
+    '{ "providerName": string, "kind": "block" | "dayoff" | "workday" | "closure" | "timeoff",',
+    '  "recurrence": "daily" | null, "weekday": "Mon|Tue|Wed|Thu|Fri|Sat|Sun" | null,',
+    '  "start": "HH:mm" | null, "end": "HH:mm" | null,',
+    '  "startDate": "YYYY-MM-DD" | null, "endDate": "YYYY-MM-DD" | null, "reason": string }',
     'Use "block" for a recurring time the provider is unavailable (lunch, meeting); include start+end (24h).',
-    'Use "dayoff" for a whole weekday the provider does NOT work; include weekday.',
+    'Use "dayoff" for a recurring WEEKDAY the provider does NOT work (e.g. "never works Fridays"); include weekday.',
     'Use "workday" for a weekday the provider DOES now work (adding a day); include weekday, and start+end only if custom hours are given.',
     'Use "closure" when the whole OFFICE is closed for dates (e.g. "office closed Aug 4-6"); set providerName to "office" and include startDate + endDate as YYYY-MM-DD.',
+    'Use "timeoff" when ONE provider is out on a SPECIFIC DATE or date range (e.g. "Dr. Jones is off June 11 for a family emergency", "Dr. Smith is out Aug 3-5"); include providerName and startDate (+ endDate for a range) as YYYY-MM-DD. Choose timeoff — NOT dayoff — whenever a calendar date is named instead of a recurring weekday.',
     "Providers:",
     providers,
   ].join("\n");

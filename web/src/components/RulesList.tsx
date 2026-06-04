@@ -1,12 +1,21 @@
-import { deleteRule, type AvailabilityRule, type Provider } from '../api'
+import { deleteRule, ruleCategory, type AvailabilityRule, type Provider } from '../api'
 
 function providerName(id: string, providers: Provider[]): string {
   return providers.find((p) => p.id === id)?.name ?? id
 }
 
+/** A compact date label: "Jun 11" for a single day, "Jun 11–13" for a range. */
+function dateLabel(startDate?: string, endDate?: string): string {
+  if (!startDate) return ''
+  const fmt = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return endDate && endDate !== startDate ? `${fmt(startDate)}–${fmt(endDate)}` : fmt(startDate)
+}
+
 function describe(r: AvailabilityRule): string {
   if (r.kind === 'dayoff') return `off on ${r.weekday}`
   if (r.kind === 'workday') return `works ${r.weekday}${r.start && r.end ? ` · ${r.start}–${r.end}` : ''}`
+  if (r.kind === 'closure') return `office closed ${dateLabel(r.startDate, r.endDate)} · ${r.reason}`
+  if (r.kind === 'timeoff') return `out ${dateLabel(r.startDate, r.endDate)} · ${r.reason}`
   return `${r.reason || 'block'} · ${r.start}–${r.end} daily`
 }
 
@@ -42,17 +51,21 @@ export function RulesList({
 
   return (
     <section className="card rules-list">
-      <span className="field-label">📋 Current rules</span>
+      <span className="field-label">📋 Rules &amp; adjustments</span>
       {sorted.length === 0 ? (
         <p className="tile-sub">No rules yet — teach one above.</p>
       ) : (
         <ul className="rules-ul">
           {sorted.map((r) => {
             const sup = isSuperseded(r)
+            const adjustment = ruleCategory(r.kind) === 'adjustment'
             return (
               <li key={r.id} className={`rule-row ${sup ? 'rule-row--sup' : ''}`}>
-                <span className="rule-prov">{providerName(r.providerId, providers)}</span>
+                <span className="rule-prov">{r.kind === 'closure' ? 'Office' : providerName(r.providerId, providers)}</span>
                 <span className="rule-desc">{describe(r)}</span>
+                <span className={`pill ${adjustment ? 'pill--brand' : ''}`}>
+                  {adjustment ? 'adjustment' : 'rule'}
+                </span>
                 {sup && <span className="pill pill--warn">superseded</span>}
                 <span className="rule-when">
                   {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}

@@ -313,6 +313,41 @@ describe("Hono backend API", () => {
     expect(body.rules.length).toBe(before.rules.length + 1);
   });
 
+  it("POST /api/rules with a provider time-off clears that day's appts into the reschedule queue", async () => {
+    const before = (await (await app.request("/api/state")).json()) as any;
+    // Pick the day Dr. Jones has the most appointments, so the move is meaningful.
+    const byDay = new Map<string, number>();
+    for (const a of before.appointments as any[]) {
+      if (a.providerId !== "prov-jones") continue;
+      const d = a.start.slice(0, 10);
+      byDay.set(d, (byDay.get(d) ?? 0) + 1);
+    }
+    const [day, count] = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0]!;
+    expect(count).toBeGreaterThan(0);
+
+    const res = await app.request("/api/rules", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sentence: `Dr. Jones is taking off ${day} for a family emergency` }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.rule.kind).toBe("timeoff");
+    expect(body.rule.providerId).toBe("prov-jones");
+    expect(body.rule.startDate).toBe(day); // explicit ISO date parsed as-is
+    expect(body.rescheduled).toBe(count);
+
+    const after = (await (await app.request("/api/state")).json()) as any;
+    // Those appointments are off the calendar...
+    const stillThere = (after.appointments as any[]).filter(
+      (a) => a.providerId === "prov-jones" && a.start.slice(0, 10) === day,
+    );
+    expect(stillThere.length).toBe(0);
+    // ...and queued for staff to rebook.
+    expect(after.reschedule.length).toBe(before.reschedule.length + count);
+    expect(after.reschedule[0].reason).toMatch(/family emergency/i);
+  });
+
   it("POST /api/rules returns 422 when it can't parse and there's no LLM", async () => {
     const res = await app.request("/api/rules", {
       method: "POST",

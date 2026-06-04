@@ -5,6 +5,7 @@ const EXAMPLES = [
   'Dr. Pana now works Saturdays',
   'Dr. Jones takes lunch from 12 to 1 every day',
   'Dr. Smith never works Wednesdays',
+  'Dr. Jones is taking off June 11 for a family emergency',
   'The office is closed Aug 4 to 6 for plumbing',
 ]
 
@@ -18,7 +19,7 @@ export function RuleTeacher({ onApplied }: { onApplied: () => void }) {
   const [sentence, setSentence] = useState(EXAMPLES[0])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [applied, setApplied] = useState<{ rule: AvailabilityRule; source: string } | null>(null)
+  const [applied, setApplied] = useState<{ rule: AvailabilityRule; source: string; rescheduled: number } | null>(null)
 
   async function teach() {
     setBusy(true)
@@ -38,7 +39,7 @@ export function RuleTeacher({ onApplied }: { onApplied: () => void }) {
           return
         }
       }
-      setApplied({ rule: res.rule, source: res.source })
+      setApplied({ rule: res.rule, source: res.source, rescheduled: res.rescheduled })
       onApplied()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -49,7 +50,7 @@ export function RuleTeacher({ onApplied }: { onApplied: () => void }) {
 
   return (
     <section className="card rule-teacher">
-      <span className="field-label">🧩 Teach a scheduling rule (plain English)</span>
+      <span className="field-label">🧩 Teach a rule or adjustment (plain English)</span>
       <div className="teach-row">
         <textarea
           className="rule-input"
@@ -76,6 +77,11 @@ export function RuleTeacher({ onApplied }: { onApplied: () => void }) {
       {applied && (
         <div className="rule-applied">
           <span className="pill pill--good">added · translated by {applied.source}</span>
+          {applied.rescheduled > 0 && (
+            <span className="pill pill--warn">
+              {applied.rescheduled} appointment{applied.rescheduled === 1 ? '' : 's'} → reschedule queue
+            </span>
+          )}
           <code>{JSON.stringify(applied.rule)}</code>
         </div>
       )}

@@ -55,7 +55,16 @@ function utilization(state: StateResponse, day: string): Util[] {
   return state.providers.map((p) => {
     const off =
       !p.workdays.includes(wd) ||
-      state.rules.some((r) => r.providerId === p.id && r.kind === 'dayoff' && r.weekday === wd)
+      state.rules.some((r) => r.providerId === p.id && r.kind === 'dayoff' && r.weekday === wd) ||
+      // one-time absences: a provider time-off or an office-wide closure on this day
+      state.rules.some(
+        (r) =>
+          ((r.kind === 'timeoff' && r.providerId === p.id) || r.kind === 'closure') &&
+          !!r.startDate &&
+          !!r.endDate &&
+          day >= r.startDate &&
+          day <= r.endDate,
+      )
     if (off) return { name: p.name, role: p.role, pct: 0, booked: 0, available: 0, off: true }
     const open = toMin(p.hours.start)
     const close = toMin(p.hours.end)

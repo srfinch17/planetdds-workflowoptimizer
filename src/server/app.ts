@@ -449,13 +449,18 @@ export function createApp(deps: AppDeps): Hono {
     store.addRule(rule);
     eventLog.record("rule_added", { outcome: "added", sentence, rule, source: parsed.source });
 
-    // An office closure cancels every appointment in its window and flags them
-    // for staff to reschedule (the office MUST be closed — nothing else to do).
+    // A dated absence cancels the affected appointments in its window and flags
+    // them for staff to reschedule. An office `closure` clears EVERY provider's
+    // appointments; a provider `timeoff` clears only that provider's — but both
+    // mean those slots can't stand, so they go to the same reschedule queue.
     let rescheduled = 0;
-    if (rule.kind === "closure" && rule.startDate && rule.endDate) {
+    const clearsAppointments = rule.kind === "closure" || rule.kind === "timeoff";
+    if (clearsAppointments && rule.startDate && rule.endDate) {
       for (const a of [...store.getAppointments()]) {
         const day = a.start.slice(0, 10);
-        if (day >= rule.startDate && day <= rule.endDate) {
+        const inWindow = day >= rule.startDate && day <= rule.endDate;
+        const affectsThis = rule.kind === "closure" || a.providerId === rule.providerId;
+        if (inWindow && affectsThis) {
           const cancelled = store.cancelAppointment(a.id);
           if (cancelled) {
             reschedule.unshift({
@@ -468,7 +473,7 @@ export function createApp(deps: AppDeps): Hono {
           }
         }
       }
-      eventLog.record("rule_added", { outcome: "closure", rule, rescheduled });
+      eventLog.record("rule_added", { outcome: rule.kind, rule, rescheduled });
     }
     return c.json({ rule, source: parsed.source, rules: store.getRules(), rescheduled });
   });

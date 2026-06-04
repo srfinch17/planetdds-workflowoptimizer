@@ -165,10 +165,12 @@ export interface Appointment {
   type: string
 }
 
+export type RuleKind = 'block' | 'dayoff' | 'workday' | 'closure' | 'timeoff'
+
 export interface AvailabilityRule {
   id: string
   providerId: string
-  kind: 'block' | 'dayoff' | 'workday' | 'closure'
+  kind: RuleKind
   recurrence?: 'daily'
   weekday?: Weekday
   start?: string
@@ -177,6 +179,12 @@ export interface AvailabilityRule {
   endDate?: string
   reason: string
   createdAt?: string
+}
+
+// Recurring/structural constraints are "rules"; one-time dated overrides
+// (an office closure or a single provider's time-off) are "adjustments".
+export function ruleCategory(kind: RuleKind): 'rule' | 'adjustment' {
+  return kind === 'closure' || kind === 'timeoff' ? 'adjustment' : 'rule'
 }
 
 export interface RescheduleRecord {
@@ -292,7 +300,7 @@ export function getCallbacks(): Promise<{ callbacks: CallbackRecord[] }> {
 
 export type RuleConflict = { existingRule: AvailabilityRule; message: string }
 export type PostRuleResult =
-  | { ok: true; rule: AvailabilityRule; source: 'rules' | 'llm'; rules: AvailabilityRule[] }
+  | { ok: true; rule: AvailabilityRule; source: 'rules' | 'llm'; rules: AvailabilityRule[]; rescheduled: number }
   | { ok: false; conflict: RuleConflict }
 
 export async function postRule(sentence: string, override = false): Promise<PostRuleResult> {
@@ -305,8 +313,13 @@ export async function postRule(sentence: string, override = false): Promise<Post
     const body = (await res.json()) as { conflict: RuleConflict }
     return { ok: false, conflict: body.conflict }
   }
-  const data = await jsonOrThrow<{ rule: AvailabilityRule; source: 'rules' | 'llm'; rules: AvailabilityRule[] }>(res)
-  return { ok: true, ...data }
+  const data = await jsonOrThrow<{
+    rule: AvailabilityRule
+    source: 'rules' | 'llm'
+    rules: AvailabilityRule[]
+    rescheduled?: number
+  }>(res)
+  return { ok: true, ...data, rescheduled: data.rescheduled ?? 0 }
 }
 
 export function deleteRule(id: string): Promise<{ rules: AvailabilityRule[] }> {

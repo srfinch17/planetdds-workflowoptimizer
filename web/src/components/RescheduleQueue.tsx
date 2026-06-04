@@ -2,9 +2,10 @@ import { fmtWeekday, fmtDate, fmtTime, type RescheduleRecord, type Provider, typ
 import { typeIcon } from '../apptIcons'
 
 /**
- * Appointments an office closure cancelled. The office MUST be closed, so these
- * can't be auto-rebooked — staff phone each patient to reschedule. Surfaced here
- * so nothing falls through the cracks.
+ * Appointments a dated adjustment cancelled — an office closure or a single
+ * provider's time-off. They can't be auto-rebooked (the provider/office is out),
+ * so staff phone each patient to reschedule. Surfaced here so nothing falls
+ * through the cracks.
  */
 export function RescheduleQueue({
   records,
@@ -32,7 +33,7 @@ export function RescheduleQueue({
         {records.length > 0 && <span className="cb-count">{records.length}</span>}
       </span>
       {records.length === 0 ? (
-        <p className="tile-sub">Nothing pending. Office closures move affected appointments here.</p>
+        <p className="tile-sub">Nothing pending. Office closures and provider time-off move affected appointments here.</p>
       ) : (
         <ul className="cb-list">
           {records.map((r) => (
