@@ -121,6 +121,25 @@ describe("RuleBasedIntentExtractor (offline brain)", () => {
     expect(intent.confidence).toBeGreaterThanOrEqual(0.6);
   });
 
+  it("keeps a bare month in the CURRENT year when asked during that month (no year-forward jump)", () => {
+    // chrono's forwardDate rolls a bare month whose 1st is already past to next
+    // year; "mid June" asked on June 4 must stay 2026, not jump to 2027.
+    const nowCtx = { refDate: "2026-06-04", store };
+    const mid = extractor.extract("can I get a cleaning in mid June", nowCtx);
+    expect([mid.earliestDate, mid.latestDate]).toEqual(["2026-06-11", "2026-06-20"]);
+    // Whole current month, with the start clamped to today (no past days offered).
+    const whole = extractor.extract("a cleaning sometime in June", nowCtx);
+    expect([whole.earliestDate, whole.latestDate]).toEqual(["2026-06-04", "2026-06-30"]);
+    // A month that has fully passed still rolls forward to next year.
+    const passed = extractor.extract("a cleaning in May", nowCtx);
+    expect([passed.earliestDate, passed.latestDate]).toEqual(["2027-05-01", "2027-05-31"]);
+  });
+
+  it("does not offer past days for a 'this month' span once the month is underway", () => {
+    const intent = extractor.extract("anything this month", { refDate: "2026-06-04", store });
+    expect(intent.earliestDate).toBe("2026-06-04"); // clamped to today, not 2026-06-01
+  });
+
   it("honors early/mid/late within a named month", () => {
     const early = extractor.extract("a cleaning in early August", ctx);
     expect([early.earliestDate, early.latestDate]).toEqual(["2026-08-01", "2026-08-10"]);

@@ -166,9 +166,13 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
       !first.start.isCertain("weekday") &&
       !first.start.isCertain("year")
     ) {
-      const d = first.start.date();
-      const year = d.getFullYear();
-      const monthIdx = d.getMonth(); // 0-based
+      const monthIdx = first.start.date().getMonth(); // 0-based; chrono gets the month right
+      // chrono's forwardDate rolls a bare month to NEXT year when its day-1 is
+      // already past — so "June" asked *during* June (the 1st < today) jumps to
+      // next year. Recompute the year ourselves: the current month and future
+      // months mean THIS year; only a month that has fully passed rolls forward.
+      const [refYear, refMonth] = ctx.refDate.split("-").map(Number) as [number, number];
+      const year = monthIdx + 1 < refMonth ? refYear + 1 : refYear;
       const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
       const third = monthThird(request.toLowerCase(), first.text.toLowerCase());
       let firstDay = 1;
@@ -192,7 +196,10 @@ export class RuleBasedIntentExtractor implements IntentExtractor {
     if (/\bweek\b/.test(matched)) latestDate = addDaysStr(startDate, 6);
     else if (/\bmonth\b/.test(matched)) latestDate = addDaysStr(startDate, 27);
 
-    return { earliestDate: startDate, latestDate, daysOfWeek: [], dateResolved: true };
+    // A span that starts in the past ("this week"/"this month" once we're a few
+    // days in) must not offer already-passed days as bookable.
+    const earliestDate = startDate < ctx.refDate ? ctx.refDate : startDate;
+    return { earliestDate, latestDate, daysOfWeek: [], dateResolved: true };
   }
 }
 
