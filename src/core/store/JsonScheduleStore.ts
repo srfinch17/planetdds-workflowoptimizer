@@ -38,7 +38,10 @@ export class JsonScheduleStore implements ScheduleStore {
   reload(): void {
     this.providers = this.read("providers.json");
     this.operatories = this.read("operatories.json");
-    this.patients = this.read("patients.json");
+    // The 20 curated, hand-maintained patients PLUS the generated named fillers
+    // that own the bulk calendar — merged so the admin can see who's booked in
+    // every slot. Curated come first, so a name/phone lookup prefers them.
+    this.patients = [...this.read<Patient[]>("patients.json"), ...this.readOptional<Patient[]>("fillerPatients.json", [])];
     this.appointmentTypes = this.read("appointmentTypes.json");
     this.appointments = this.read("appointments.json");
     this.rules = this.read("rules.json");
@@ -46,6 +49,15 @@ export class JsonScheduleStore implements ScheduleStore {
 
   private read<T>(file: string): T {
     return JSON.parse(readFileSync(join(this.dataDir, file), "utf-8")) as T;
+  }
+
+  /** Read a file that may not exist (e.g. fillerPatients.json in a slim setup). */
+  private readOptional<T>(file: string, fallback: T): T {
+    try {
+      return this.read<T>(file);
+    } catch {
+      return fallback;
+    }
   }
 
   private write(file: string, data: unknown): void {

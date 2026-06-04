@@ -193,6 +193,7 @@ export function Admin() {
             providers={state.providers}
             appointments={state.appointments}
             rules={state.rules}
+            patients={state.patients}
             day={day}
             highlights={openHighlights}
             onBookSlot={(key) => {

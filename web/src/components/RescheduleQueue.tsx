@@ -17,8 +17,8 @@ export function RescheduleQueue({
   patients: Patient[]
 }) {
   const provName = (id: string) => providers.find((p) => p.id === id)?.name ?? id
-  // Named patient → their name; otherwise an anonymized record label (the bulk
-  // calendar belongs to unnamed filler patients) — never a raw "pat-anon-…" id.
+  // Patients (curated + named fillers) resolve to a real name; the fallback is
+  // just defensive for any unmapped id — never a raw "pat-…" id on screen.
   const patName = (id: string) => {
     const named = patients.find((p) => p.id === id)
     if (named) return named.name

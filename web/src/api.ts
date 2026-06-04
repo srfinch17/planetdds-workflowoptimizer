@@ -153,6 +153,7 @@ export interface Patient {
   id: string
   name: string
   preferredProviderId: string | null
+  phone?: string
 }
 
 export interface Appointment {

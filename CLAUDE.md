@@ -184,12 +184,16 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
   same patient and cancels the old one together). `POST /api/cancel` removes one.
 - Reschedule keeps the same type and prefers the same dentist (falls back to other
   eligible providers only if that dentist has nothing in the window).
-- Seed realism: the bulk calendar belongs to **anonymous filler patients**; each of
-  the 20 named patients has just 2–3 upcoming appointments, so "cancel my appointment"
-  resolves to a sane list, not hundreds. The generator also **relabels any clinically
-  impossible seed appointment** (a hygienist filling, a non-specialist extraction) to
-  an eligible type while keeping the slot, so the calendar is consistent with the same
-  eligibility rules new bookings obey (`scripts/genAppointments.mjs`).
+- Seed realism: the bulk calendar belongs to **~1,170 named filler patients** (first +
+  last name + phone), generated into `fillerPatients.json` and merged with the 20
+  curated patients by the store — so the **admin day-grid shows who's booked in every
+  slot** (and a freshly-booked appointment stands out by name). The 20 curated patients
+  still get just 2–3 upcoming appointments each, so "cancel my appointment" resolves to a
+  sane list. Filler names/phones never collide with the curated 20 (phones start at
+  `555-1000`, above the curated `555-0101…0120` block). The generator also **relabels any
+  clinically impossible seed appointment** (a hygienist filling, a non-specialist
+  extraction) to an eligible type while keeping the slot, so the calendar is consistent
+  with the same eligibility rules new bookings obey (`scripts/genAppointments.mjs`).
 - **Security note (deliberate boundary):** `/api/cancel` and `/api/reschedule` verify
   the appointment belongs to the supplied `patientId` (so a guessed id can't wipe a
   stranger's slot) — but that's defense-in-depth, **not auth**. There's no session, so
@@ -223,7 +227,11 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
 - `src/core/data/*.json` are the mock store. `appointments.json` holds ~a year of
   seeded appointments (~4,400) generated deterministically by `scripts/genAppointments.mjs`
   (re-run with `node scripts/genAppointments.mjs`). It keeps the canonical example day
-  **2026-06-04** lightly loaded so the open-slot scenarios stay valid.
+  **2026-06-04** lightly loaded so the open-slot scenarios stay valid. The same script
+  emits `fillerPatients.json` — the named patients (first/last + phone) that own the bulk
+  calendar; the store merges them with the curated 20. Re-running is safe: filler patient
+  selection reuses the one RNG draw the generator already made per appointment, so the
+  calendar's shape (slots/types/occupancy) is unchanged — only who owns each slot.
 - Appointment durations are type-driven (cleaning 30m, filling 60m, extraction 90m);
   the candidate generator indexes appointments by day to stay fast against a full year.
 

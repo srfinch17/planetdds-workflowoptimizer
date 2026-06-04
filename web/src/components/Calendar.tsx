@@ -1,7 +1,15 @@
-import { fmtTime, type Provider, type Appointment, type AvailabilityRule } from '../api'
+import { fmtTime, type Provider, type Appointment, type AvailabilityRule, type Patient } from '../api'
 import { worksOn, officeClosure } from '../availability'
 import { typeIcon } from '../apptIcons'
 import { todayISO } from '../today'
+
+/** A readable label for an appointment's patient (falls back if unmapped). */
+function patientLabel(id: string, byId: Map<string, Patient>): { name: string; phone: string } {
+  const p = byId.get(id)
+  if (p) return { name: p.name, phone: p.phone ?? '' }
+  const n = id.match(/(\d+)$/)
+  return { name: n ? `Patient #${Number(n[1])}` : 'Patient', phone: '' }
+}
 
 // The grid window: clinic-wide open/close in 30-minute rows. Per-provider hours
 // inside this window are shaded "closed" so the grid is honest about who's in.
@@ -33,6 +41,9 @@ export interface CalendarProps {
   providers: Provider[]
   appointments: Appointment[]
   rules: AvailabilityRule[]
+  // Patient roster, so the admin grid can show WHO is booked in each slot. Omit
+  // on the patient-facing view (privacy: those cells render as "unavailable").
+  patients?: Patient[]
   day: string // "YYYY-MM-DD"
   highlights?: Set<string> // `${providerId}@${startISO}` — every open slot to light up as bookable
   recommendedKeys?: Set<string> // the AI's top picks among highlights — get a ★
@@ -54,6 +65,7 @@ export function Calendar({
   providers,
   appointments,
   rules,
+  patients,
   day,
   highlights,
   recommendedKeys,
@@ -63,6 +75,7 @@ export function Calendar({
 }: CalendarProps) {
   const dayAppts = appointments.filter((a) => a.start.slice(0, 10) === day)
   const closed = officeClosure(day, rules)
+  const patientById = new Map((patients ?? []).map((p) => [p.id, p]))
 
   const timeLabels: string[] = []
   for (let i = 0; i < ROWS; i++) {
@@ -154,9 +167,15 @@ export function Calendar({
       {dayAppts.map((a) => {
         const idx = providers.findIndex((p) => p.id === a.providerId)
         if (idx < 0) return null
+        const { name, phone } = patientLabel(a.patientId, patientById)
+        // Full detail on hover (the small block can't show everything).
+        const title = patientView
+          ? undefined
+          : `${name}${phone ? ` · ${phone}` : ''} · ${a.type} · ${fmtTime(a.start)}–${fmtTime(a.end)}`
         return (
           <div
             key={a.id}
+            title={title}
             className={`cal-block cal-block--appt${patientView ? ' cal-block--unavail' : ''}`}
             style={{ gridColumn: 2 + idx, gridRow: `${line(isoToMin(a.start))} / ${line(isoToMin(a.end))}` }}
           >
@@ -164,8 +183,8 @@ export function Calendar({
               <span>unavailable</span>
             ) : (
               <>
-                <strong>{typeIcon(a.type)} {a.type}</strong>
-                <small>{fmtTime(a.start)}</small>
+                <strong>{name}</strong>
+                <small>{typeIcon(a.type)} {phone || a.type}</small>
               </>
             )}
           </div>

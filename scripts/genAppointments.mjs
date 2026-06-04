@@ -60,6 +60,58 @@ function pickType() {
   return "cleaning";
 }
 
+// --- named filler patients ---------------------------------------------------
+// The bulk calendar used anonymous "pat-anon-N" ids, so the admin day-grid was a
+// wall of indistinguishable slots. Give every filler appointment a REAL named
+// patient (first + last) and a phone, drawn from a deterministic pool, so the
+// admin can see who's booked — and a freshly-booked appointment stands out by
+// name. Written to fillerPatients.json; the store merges it with the curated 20.
+const FIRST_NAMES = [
+  "James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda", "David", "Elizabeth",
+  "William", "Barbara", "Richard", "Susan", "Joseph", "Jessica", "Thomas", "Karen", "Christopher", "Sarah",
+  "Daniel", "Nancy", "Matthew", "Lisa", "Anthony", "Margaret", "Mark", "Sandra", "Donald", "Ashley",
+  "Steven", "Kimberly", "Andrew", "Emily", "Joshua", "Donna", "Kevin", "Michelle", "Brian", "Carol",
+  "Aisha", "Mateo", "Priya", "Wei", "Sofia", "Omar", "Yuki", "Diego", "Ingrid", "Hassan",
+  "Camila", "Jamal", "Fatima", "Leon", "Noor", "Tomas", "Amara", "Felix", "Lena", "Arjun",
+];
+const LAST_NAMES = [
+  "Anderson", "Thompson", "Martinez", "Robinson", "Clark", "Rodriguez", "Lewis", "Lee", "Walker", "Hall",
+  "Allen", "Young", "Hernandez", "King", "Wright", "Hill", "Scott", "Green", "Adams", "Baker",
+  "Gonzalez", "Nelson", "Carter", "Mitchell", "Perez", "Roberts", "Turner", "Phillips", "Campbell", "Parker",
+  "Evans", "Edwards", "Collins", "Stewart", "Morris", "Murphy", "Rivera", "Cook", "Rogers", "Morgan",
+  "Peterson", "Cooper", "Reed", "Bailey", "Bell", "Gomez", "Kelly", "Howard", "Ward", "Cox",
+  "Diaz", "Richardson", "Wood", "Watson", "Brooks", "Bennett", "Gray", "Hughes", "Price", "Sanders",
+  "Bryant", "Russell", "Griffin", "Hayes", "Myers", "Ford", "Hamilton", "Graham", "Sullivan", "Wallace",
+  "Okonkwo", "Tanaka", "Schmidt", "Kowalski", "Andersson", "Petrov", "Costa", "Ali", "Reyes", "Vargas",
+];
+const FILLER_AREA_CODES = ["949", "714", "310", "626", "818", "562", "323", "657"];
+
+// Build a deterministic pool of UNIQUE named patients. Uses its OWN rng so it
+// doesn't disturb the appointment-placement sequence below (which must stay
+// byte-identical to keep the calendar shape and every availability test stable).
+function buildFillerPool(size) {
+  const prng = rng(99887766);
+  const ppick = (arr) => arr[Math.floor(prng() * arr.length)];
+  const curatedNames = new Set(patients.map((p) => p.name.toLowerCase()));
+  const usedNames = new Set();
+  const pool = [];
+  let guard = 0;
+  while (pool.length < size && guard < size * 60) {
+    guard += 1;
+    const name = `${ppick(FIRST_NAMES)} ${ppick(LAST_NAMES)}`;
+    const key = name.toLowerCase();
+    if (curatedNames.has(key) || usedNames.has(key)) continue; // unique, never a curated name
+    usedNames.add(key);
+    const i = pool.length;
+    // last4 starts at 1000 → never collides with the curated 0101–0120 block, so
+    // "cancel my appointment, 555-0101" still resolves to the curated patient.
+    const phone = `${ppick(FILLER_AREA_CODES)}-555-${String(1000 + i).padStart(4, "0")}`;
+    pool.push({ id: `pat-f-${String(i + 1).padStart(4, "0")}`, name, preferredProviderId: null, phone });
+  }
+  return pool;
+}
+const fillerPool = buildFillerPool(1200);
+
 // --- date helpers ---
 const dayMs = 24 * 60 * 60 * 1000;
 const toDate = (s) => new Date(`${s}T00:00:00`);
@@ -144,13 +196,16 @@ for (let d = toDate(BASE); iso(d) <= END; d = new Date(d.getTime() + dayMs)) {
         continue;
       }
       seq += 1;
-      pick(patients); // keep the RNG draw so the calendar stays byte-identical;
-                      // the bulk calendar uses anonymous fillers (see below).
+      // The SAME single RNG draw the old code made (and threw away) to keep the
+      // calendar byte-identical — but now it actually NAMES the patient instead
+      // of leaving an anonymous "pat-anon-N" filler. Sequence is unchanged, so
+      // every slot/type/occupancy (and every availability test) is identical.
+      const filler = pick(fillerPool);
       out.push({
         id: `appt-${String(seq).padStart(3, "0")}`,
         providerId: p.id,
         operatoryId: room.id,
-        patientId: `pat-anon-${String(seq).padStart(4, "0")}`,
+        patientId: filler.id,
         start: `${date}T${minToHHmm(startMin)}:00`,
         end: `${date}T${minToHHmm(endMin)}:00`,
         type,
@@ -204,5 +259,12 @@ for (let d = toDate(BASE); iso(d) <= END; d = new Date(d.getTime() + dayMs)) {
   }
 }
 
+// Only write the filler patients actually referenced by an appointment (after
+// curated relabeling), so the roster has no ghost records.
+const usedFillerIds = new Set(out.map((a) => a.patientId).filter((id) => id.startsWith("pat-f-")));
+const fillerOut = fillerPool.filter((p) => usedFillerIds.has(p.id));
+
 writeFileSync(DATA + "appointments.json", JSON.stringify(out, null, 2) + "\n", "utf-8");
+writeFileSync(DATA + "fillerPatients.json", JSON.stringify(fillerOut, null, 2) + "\n", "utf-8");
 console.log(`Wrote ${out.length} appointments (${BASE} → ${END}) to appointments.json`);
+console.log(`Wrote ${fillerOut.length} named filler patients to fillerPatients.json`);
