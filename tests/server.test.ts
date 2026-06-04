@@ -342,6 +342,63 @@ describe("Hono backend API", () => {
     expect(queue.callbacks[0].patientPhone).toBe("949-555-0143");
   });
 
+  it("DELETE /api/callbacks/:id dismisses a callback and logs the dismissal", async () => {
+    // Queue an emergency callback.
+    await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request: "a tooth got knocked out and it won't stop bleeding", refDate: "2026-06-04" }),
+    });
+    let queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks.length).toBe(1);
+    const id = queue.callbacks[0].id;
+
+    const res = await app.request(`/api/callbacks/${id}`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.ok).toBe(true);
+    expect(body.callbacks.length).toBe(0); // gone
+
+    queue = (await (await app.request("/api/callbacks")).json()) as any;
+    expect(queue.callbacks.length).toBe(0); // and stays gone
+
+    // The dismissal is noted in the audit log.
+    const logs = (await (await app.request("/api/logs?type=queue_dismissed")).json()) as any;
+    expect(logs.events.length).toBe(1);
+    expect(logs.events[0].data.queue).toBe("callback");
+
+    // Unknown id is a 404.
+    const missing = await app.request("/api/callbacks/cb-nope", { method: "DELETE" });
+    expect(missing.status).toBe(404);
+  });
+
+  it("DELETE /api/reschedule/:id dismisses a reschedule entry and logs it", async () => {
+    // Populate the reschedule queue with a provider time-off.
+    const state = (await (await app.request("/api/state")).json()) as any;
+    const day = (state.appointments as any[]).find((a) => a.providerId === "prov-jones")!.start.slice(0, 10);
+    await app.request("/api/rules", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sentence: `Dr. Jones is off ${day} for a conference` }),
+    });
+    let after = (await (await app.request("/api/state")).json()) as any;
+    expect(after.reschedule.length).toBeGreaterThan(0);
+    const id = after.reschedule[0].id;
+    const before = after.reschedule.length;
+
+    const res = await app.request(`/api/reschedule/${id}`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.ok).toBe(true);
+    expect(body.reschedule.length).toBe(before - 1);
+
+    after = (await (await app.request("/api/state")).json()) as any;
+    expect(after.reschedule.find((r: any) => r.id === id)).toBeUndefined(); // cleared
+
+    const logs = (await (await app.request("/api/logs?type=queue_dismissed")).json()) as any;
+    expect(logs.events.some((e: any) => e.data.queue === "reschedule" && e.data.id === id)).toBe(true);
+  });
+
   it("POST /api/rules parses a sentence (offline regex) and adds the rule", async () => {
     const before = (await (await app.request("/api/state")).json()) as any;
     const res = await app.request("/api/rules", {

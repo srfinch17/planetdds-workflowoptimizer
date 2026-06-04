@@ -18,6 +18,7 @@ const TYPE_FILTERS: { label: string; value: EventType | 'all' }[] = [
   { label: 'Bookings', value: 'booking' },
   { label: 'Escalations', value: 'escalation' },
   { label: 'Rules', value: 'rule_added' },
+  { label: 'Dismissals', value: 'queue_dismissed' },
   { label: 'Errors', value: 'error' },
 ]
 
@@ -26,6 +27,7 @@ const TYPE_LABEL: Record<string, string> = {
   booking: 'booking',
   escalation: 'escalation',
   rule_added: 'rule',
+  queue_dismissed: 'dismissed',
   error: 'error',
 }
 
@@ -181,6 +183,10 @@ function summarize(e: LogEvent): string {
       return `${d.level} — "${d.matched}"`
     case 'rule_added':
       return d.outcome === 'rejected' ? `rejected: "${d.sentence}"` : `added: "${d.sentence}"`
+    case 'queue_dismissed':
+      return d.queue === 'callback'
+        ? `callback cleared · ${d.patientName ?? 'no name'}${d.patientPhone ? ` · ${d.patientPhone}` : ''}`
+        : `reschedule cleared · ${d.patientId}${d.reason ? ` (${d.reason})` : ''}`
     case 'error':
       return String(d.message ?? 'error')
     default:

@@ -653,7 +653,14 @@
 .cb-item__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+}
+/* Push the "✓ Done" dismiss button to the right edge of the queue item header. */
+.cb-dismiss {
+  margin-left: auto;
+  padding: 2px 9px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 .cb-time {
   font-size: 12px;

@@ -11,10 +11,13 @@ export function RescheduleQueue({
   records,
   providers,
   patients,
+  onDismiss,
 }: {
   records: RescheduleRecord[]
   providers: Provider[]
   patients: Patient[]
+  // Clear an entry once staff have rebooked the patient (or otherwise handled it).
+  onDismiss?: (id: string) => void
 }) {
   const provName = (id: string) => providers.find((p) => p.id === id)?.name ?? id
   // Patients (curated + named fillers) resolve to a real name; the fallback is
@@ -41,6 +44,15 @@ export function RescheduleQueue({
               <div className="cb-item__head">
                 <span className="pill pill--warn">reschedule</span>
                 <span className="cb-time">{r.reason}</span>
+                {onDismiss && (
+                  <button
+                    className="btn btn--sm btn--ghost cb-dismiss"
+                    title="Rebooked the patient (or handled it) — clear this entry"
+                    onClick={() => onDismiss(r.id)}
+                  >
+                    ✓ Done
+                  </button>
+                )}
               </div>
               <p className="cb-request">
                 {patName(r.appointment.patientId)} · {provName(r.appointment.providerId)} ·{' '}

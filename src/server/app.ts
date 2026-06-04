@@ -12,7 +12,7 @@ import { overlaps } from "../core/time";
 import type { EventLog, EventType } from "../core/log/eventLog";
 import { LatencyMeter } from "./metrics";
 
-const LOG_TYPES: EventType[] = ["schedule_request", "escalation", "booking", "rule_added", "error"];
+const LOG_TYPES: EventType[] = ["schedule_request", "escalation", "booking", "rule_added", "queue_dismissed", "error"];
 
 /** A request that triaged as an emergency/urgent, queued for staff to call back. */
 interface CallbackRecord {
@@ -181,6 +181,41 @@ export function createApp(deps: AppDeps): Hono {
     if (name) cb.patientName = name;
     if (phone) cb.patientPhone = phone;
     return c.json({ ok: true, callbacks });
+  });
+
+  // Dismiss (clear) a callback once staff have phoned the patient and handled it.
+  // Demo assumption: the call was made and the issue resolved, so we just remove
+  // the entry and note the dismissal in the audit log — no verification needed.
+  app.delete("/api/callbacks/:id", (c) => {
+    const id = c.req.param("id");
+    const idx = callbacks.findIndex((x) => x.id === id);
+    if (idx === -1) return c.json({ error: "no callback with that id" }, 404);
+    const [removed] = callbacks.splice(idx, 1);
+    eventLog.record("queue_dismissed", {
+      queue: "callback",
+      id,
+      level: removed!.level,
+      patientName: removed!.patientName,
+      patientPhone: removed!.patientPhone,
+    });
+    return c.json({ ok: true, callbacks });
+  });
+
+  // Dismiss (clear) a "needs rescheduling" entry once staff have rebooked the
+  // patient (or otherwise handled it). Same demo assumption: just remove + log.
+  app.delete("/api/reschedule/:id", (c) => {
+    const id = c.req.param("id");
+    const idx = reschedule.findIndex((x) => x.id === id);
+    if (idx === -1) return c.json({ error: "no reschedule entry with that id" }, 404);
+    const [removed] = reschedule.splice(idx, 1);
+    eventLog.record("queue_dismissed", {
+      queue: "reschedule",
+      id,
+      appointmentId: removed!.appointment.id,
+      patientId: removed!.appointment.patientId,
+      reason: removed!.reason,
+    });
+    return c.json({ ok: true, reschedule });
   });
 
   // Open slots for booking, grouped by day. Same candidate generator the

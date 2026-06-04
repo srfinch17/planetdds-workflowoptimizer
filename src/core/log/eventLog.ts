@@ -12,7 +12,7 @@ import { dirname } from "node:path";
  * information. Fine for this mock-data demo. In production this log must be
  * encrypted at rest, access-controlled, retention-limited, and likely redacted.
  */
-export type EventType = "schedule_request" | "escalation" | "booking" | "rule_added" | "error";
+export type EventType = "schedule_request" | "escalation" | "booking" | "rule_added" | "queue_dismissed" | "error";
 
 export interface LogEvent {
   id: string;

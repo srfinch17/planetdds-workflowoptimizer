@@ -3,7 +3,14 @@ import { type CallbackRecord } from '../api'
 // The staff worklist: patients whose messages triaged as emergency/urgent and
 // who must be called back ASAP. This is the "override" made operational — the
 // office sees exactly who to phone, newest first.
-export function CallbackQueue({ callbacks }: { callbacks: CallbackRecord[] }) {
+export function CallbackQueue({
+  callbacks,
+  onDismiss,
+}: {
+  callbacks: CallbackRecord[]
+  // Clear a callback once staff have phoned the patient and handled it.
+  onDismiss?: (id: string) => void
+}) {
   return (
     <section className="card callback-queue">
       <span className="field-label">
@@ -21,6 +28,15 @@ export function CallbackQueue({ callbacks }: { callbacks: CallbackRecord[] }) {
                   {cb.level === 'emergency' ? '🚨 EMERGENCY' : '⚠️ URGENT'}
                 </span>
                 <span className="cb-time">{new Date(cb.createdAt).toLocaleTimeString()}</span>
+                {onDismiss && (
+                  <button
+                    className="btn btn--sm btn--ghost cb-dismiss"
+                    title="Called the patient back and handled it — clear this entry"
+                    onClick={() => onDismiss(cb.id)}
+                  >
+                    ✓ Done
+                  </button>
+                )}
               </div>
               {cb.patientName || cb.patientPhone ? (
                 <p className="cb-contact">

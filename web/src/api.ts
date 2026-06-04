@@ -95,7 +95,7 @@ export interface ScheduleResponse {
   appointments: AppointmentSummary[] | null
 }
 
-export type EventType = 'schedule_request' | 'escalation' | 'booking' | 'rule_added' | 'error'
+export type EventType = 'schedule_request' | 'escalation' | 'booking' | 'rule_added' | 'queue_dismissed' | 'error'
 
 export interface LogEvent {
   id: string
@@ -320,6 +320,21 @@ export function getMetrics(): Promise<MetricsResponse> {
 
 export function getCallbacks(): Promise<{ callbacks: CallbackRecord[] }> {
   return fetch('/api/callbacks').then((r) => jsonOrThrow<{ callbacks: CallbackRecord[] }>(r))
+}
+
+// Dismiss a callback once staff have phoned the patient and handled it (the
+// entry is removed and the dismissal is logged).
+export function dismissCallback(id: string): Promise<{ ok: boolean; callbacks: CallbackRecord[] }> {
+  return fetch(`/api/callbacks/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) =>
+    jsonOrThrow<{ ok: boolean; callbacks: CallbackRecord[] }>(r),
+  )
+}
+
+// Dismiss a "needs rescheduling" entry once staff have rebooked the patient.
+export function dismissReschedule(id: string): Promise<{ ok: boolean; reschedule: RescheduleRecord[] }> {
+  return fetch(`/api/reschedule/${encodeURIComponent(id)}`, { method: 'DELETE' }).then((r) =>
+    jsonOrThrow<{ ok: boolean; reschedule: RescheduleRecord[] }>(r),
+  )
 }
 
 export type RuleConflict = { existingRule: AvailabilityRule; message: string }

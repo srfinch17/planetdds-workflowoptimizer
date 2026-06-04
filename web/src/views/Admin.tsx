@@ -5,6 +5,8 @@ import {
   getSlotOptions,
   postBook,
   resetSystem,
+  dismissCallback,
+  dismissReschedule,
   type StateResponse,
   type CallbackRecord,
   type CandidateSlot,
@@ -162,9 +164,25 @@ export function Admin() {
 
       {error && <div className="banner banner--error">{error}</div>}
 
-      <CallbackQueue callbacks={callbacks} />
+      <CallbackQueue
+        callbacks={callbacks}
+        onDismiss={async (id) => {
+          await dismissCallback(id)
+          reload()
+        }}
+      />
 
-      {state && <RescheduleQueue records={state.reschedule} providers={state.providers} patients={state.patients} />}
+      {state && (
+        <RescheduleQueue
+          records={state.reschedule}
+          providers={state.providers}
+          patients={state.patients}
+          onDismiss={async (id) => {
+            await dismissReschedule(id)
+            reload()
+          }}
+        />
+      )}
 
       {state && (
         <section className="calendar-panel">
