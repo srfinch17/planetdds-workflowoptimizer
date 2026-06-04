@@ -245,14 +245,37 @@ export function postSchedule(
   refDate?: string,
   mode?: ExtractionMode,
   patient?: { name?: string; phone?: string },
+  appointmentType?: string,
 ): Promise<ScheduleResponse> {
   return fetch('/api/schedule', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     // Send the patient-details bar too: if a request escalates to a callback,
-    // the server uses it as the contact to call back.
-    body: JSON.stringify({ request, refDate, mode, patientName: patient?.name, patientPhone: patient?.phone }),
+    // the server uses it as the contact to call back. appointmentType is the
+    // patient's procedure pick when their request didn't name one.
+    body: JSON.stringify({ request, refDate, mode, patientName: patient?.name, patientPhone: patient?.phone, appointmentType }),
   }).then((r) => jsonOrThrow<ScheduleResponse>(r))
+}
+
+// One open 30-minute start + the procedures that can actually be booked there
+// (longer ones only when the following slot is free and the provider/room is
+// eligible). Powers the Admin per-slot booking dropdown.
+export interface SlotOption {
+  type: string
+  durationMin: number
+  operatoryId: string
+  end: string
+}
+export interface OpenSlot {
+  providerId: string
+  start: string
+  options: SlotOption[]
+}
+
+export function getSlotOptions(from: string, to?: string): Promise<{ slotsByDay: Record<string, OpenSlot[]> }> {
+  const q = new URLSearchParams({ from })
+  if (to) q.set('to', to)
+  return fetch(`/api/slot-options?${q}`).then((r) => jsonOrThrow<{ slotsByDay: Record<string, OpenSlot[]> }>(r))
 }
 
 // Attach the patient's contact info to a queued callback (when an escalation

@@ -2,16 +2,19 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   getState,
   getCallbacks,
-  getAvailability,
+  getSlotOptions,
   postBook,
   resetSystem,
   type StateResponse,
   type CallbackRecord,
   type CandidateSlot,
+  type OpenSlot,
+  type SlotOption,
 } from '../api'
 import { Calendar } from '../components/Calendar'
 import { BookSlotDialog } from '../components/BookSlotDialog'
 import { MonthCalendar } from '../components/MonthCalendar'
+import { typeIcon } from '../apptIcons'
 import { RuleTeacher } from '../components/RuleTeacher'
 import { RulesList } from '../components/RulesList'
 import { CallbackQueue } from '../components/CallbackQueue'
@@ -38,12 +41,12 @@ export function Admin() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Admin-side booking: the open slots on the day grid are clickable so staff
-  // can book a patient directly (e.g. while on a callback). The type drives
-  // which openings are offered, so duration + eligibility stay correct.
-  const [bookType, setBookType] = useState('cleaning')
-  const [daySlots, setDaySlots] = useState<CandidateSlot[]>([]) // open slots for the shown day
-  const [pending, setPending] = useState<CandidateSlot | null>(null) // slot being booked
+  // Admin-side booking: every open 30-min slot on the day grid is clickable so
+  // staff can book a patient directly (e.g. while on a callback). Clicking opens
+  // a dialog whose procedure dropdown lists only the types that fit THAT slot —
+  // so duration + eligibility stay correct without a global type to remember.
+  const [daySlots, setDaySlots] = useState<OpenSlot[]>([]) // open slots (with their fitting types) for the shown day
+  const [pending, setPending] = useState<OpenSlot | null>(null) // slot being booked
   const [booking, setBooking] = useState(false)
   const [bookError, setBookError] = useState<string | null>(null)
   const [bookConfirm, setBookConfirm] = useState<string | null>(null) // transient "✓ Booked …"
@@ -66,13 +69,13 @@ export function Admin() {
     reload()
   }, [reload])
 
-  // Refresh the bookable open slots whenever the shown day or the chosen
-  // appointment type changes (and once the schedule state is loaded).
+  // Refresh the bookable open slots (and the procedures that fit each) whenever
+  // the shown day changes, or once the schedule state is loaded.
   const loadDaySlots = useCallback(() => {
-    getAvailability({ from: day, to: day, type: bookType })
+    getSlotOptions(day)
       .then(({ slotsByDay }) => setDaySlots(slotsByDay[day] ?? []))
       .catch(() => setDaySlots([]))
-  }, [day, bookType])
+  }, [day])
 
   useEffect(() => {
     if (state) loadDaySlots()
@@ -92,13 +95,22 @@ export function Admin() {
   const openByKey = new Map(daySlots.map((s) => [`${s.providerId}@${s.start}`, s]))
   const openHighlights = new Set(openByKey.keys())
 
-  async function confirmBooking(name: string, phone: string) {
+  async function confirmBooking(name: string, phone: string, option: SlotOption) {
     if (!pending) return
     setBooking(true)
     setBookError(null)
     try {
-      const res = await postBook(pending, { name, phone: phone || undefined })
-      setBookConfirm(`✓ Booked ${name} · ${res.confirmationNumber}`)
+      // The clicked time + the chosen procedure define the real slot (its room +
+      // end time come from the option the server said fits here).
+      const slot: CandidateSlot = {
+        providerId: pending.providerId,
+        operatoryId: option.operatoryId,
+        start: pending.start,
+        end: option.end,
+        type: option.type,
+      }
+      const res = await postBook(slot, { name, phone: phone || undefined })
+      setBookConfirm(`✓ Booked ${name} · ${typeIcon(option.type)} ${option.type} · ${res.confirmationNumber}`)
       setPending(null)
       reload() // new appointment shows as a booked block; loadDaySlots re-runs after
     } catch (e) {
@@ -177,16 +189,14 @@ export function Admin() {
             <span className="field-label">
               📆 {day} — day detail · <span className="field-label__cta">click an open slot to book</span>
             </span>
-            <label className="book-type">
-              <span>Booking</span>
-              <select value={bookType} onChange={(e) => setBookType(e.target.value)}>
-                {state.appointmentTypes.map((t) => (
-                  <option key={t.type} value={t.type}>
-                    {t.type} · {t.durationMin}m
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="type-legend" title="What each icon means (and how long each procedure takes)">
+              {state.appointmentTypes.map((t) => (
+                <span key={t.type} className="type-legend__item">
+                  <span className="type-legend__icon" aria-hidden>{typeIcon(t.type)}</span>
+                  {t.type} · {t.durationMin}m
+                </span>
+              ))}
+            </div>
           </div>
           {bookConfirm && <div className="banner banner--ok">{bookConfirm}</div>}
           <Calendar
@@ -210,8 +220,9 @@ export function Admin() {
 
       {pending && (
         <BookSlotDialog
-          slot={pending}
           providerName={providerName(pending.providerId)}
+          start={pending.start}
+          options={pending.options}
           busy={booking}
           error={bookError}
           onCancel={() => {

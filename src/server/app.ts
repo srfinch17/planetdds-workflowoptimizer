@@ -79,6 +79,10 @@ export function createApp(deps: AppDeps): Hono {
     }
     const refDate = typeof body.refDate === "string" ? body.refDate : undefined;
     const mode = body.mode === "llm" || body.mode === "rules" ? body.mode : undefined;
+    // Optional procedure override: the patient picked a type when their request
+    // didn't name one. Validated against the clinic's real types (or ignored).
+    const knownTypes = new Set(store.getAppointmentTypes().map((t) => t.type));
+    const appointmentType = typeof body.appointmentType === "string" && knownTypes.has(body.appointmentType) ? body.appointmentType : undefined;
     // The patient-details bar (if filled) — used as a fallback callback contact.
     const bodyName = typeof body.patientName === "string" && body.patientName.trim() ? body.patientName.trim() : null;
     const bodyPhone = typeof body.patientPhone === "string" && body.patientPhone.trim() ? body.patientPhone.trim() : null;
@@ -89,6 +93,7 @@ export function createApp(deps: AppDeps): Hono {
     const { intent, recommendation, escalation, patientMatch, appointments } = await assistant.handle(request, {
       refDate,
       mode,
+      appointmentType,
     });
     const latencyMs = Math.round((performance.now() - t0) * 10) / 10;
     latency.record(latencyMs);
@@ -222,6 +227,72 @@ export function createApp(deps: AppDeps): Hono {
       (slotsByDay[day] ??= []).push(slot);
     }
     for (const list of Object.values(slotsByDay)) list.sort((a, b) => a.start.localeCompare(b.start));
+    return c.json({ slotsByDay });
+  });
+
+  // For the Admin per-slot booking dropdown: for every open 30-minute start,
+  // WHICH procedure types can actually be booked there. A type appears only if
+  // its full duration fits (the following slot(s) are free), the provider is
+  // eligible, and an operatory with the required equipment is free — all of which
+  // the candidate generator already enforces, so we just run it per type and
+  // bucket by provider+start. Each option carries the operatory + end the booking
+  // needs, so the UI books exactly what the staff picked.
+  app.get("/api/slot-options", (c) => {
+    const from = c.req.query("from");
+    if (!from) return c.json({ error: "from (YYYY-MM-DD) is required" }, 400);
+    const to = c.req.query("to") || from;
+
+    interface SlotOption {
+      type: string;
+      durationMin: number;
+      operatoryId: string;
+      end: string;
+    }
+    interface OpenSlot {
+      providerId: string;
+      start: string;
+      options: SlotOption[];
+    }
+    const byDay: Record<string, Map<string, OpenSlot>> = {};
+
+    for (const t of store.getAppointmentTypes()) {
+      const intent: SchedulingIntent = {
+        action: "book",
+        appointmentType: t.type,
+        urgency: "routine",
+        earliestDate: from,
+        latestDate: to,
+        daysOfWeek: [],
+        timeEarliest: null,
+        timeLatest: null,
+        partOfDay: null,
+        preferredProviderId: null,
+        patientName: null,
+        patientPhone: null,
+        rawRequest: "",
+        source: "rules",
+        confidence: 1,
+      };
+      for (const slot of generateCandidates(intent, store, { refDate: from })) {
+        if (Number(slot.start.slice(14, 16)) % 30 !== 0) continue; // grid-aligned start
+        const day = slot.start.slice(0, 10);
+        const key = `${slot.providerId}@${slot.start}`;
+        const map = (byDay[day] ??= new Map());
+        const entry = map.get(key) ?? { providerId: slot.providerId, start: slot.start, options: [] };
+        // One option per type per slot (the generator may emit several rooms).
+        if (!entry.options.some((o) => o.type === t.type)) {
+          entry.options.push({ type: t.type, durationMin: t.durationMin, operatoryId: slot.operatoryId, end: slot.end });
+        }
+        map.set(key, entry);
+      }
+    }
+
+    const slotsByDay: Record<string, OpenSlot[]> = {};
+    for (const [day, map] of Object.entries(byDay)) {
+      const list = [...map.values()].sort((a, b) => a.start.localeCompare(b.start));
+      for (const e of list) e.options.sort((a, b) => a.durationMin - b.durationMin);
+      slotsByDay[day] = list;
+    }
     return c.json({ slotsByDay });
   });
 

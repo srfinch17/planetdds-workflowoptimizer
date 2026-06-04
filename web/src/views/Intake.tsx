@@ -53,8 +53,12 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
   const [providers, setProviders] = useState<Provider[]>([])
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [rules, setRules] = useState<AvailabilityRule[]>([])
+  const [appointmentTypes, setAppointmentTypes] = useState<{ type: string; durationMin: number }[]>([])
   const [patientName, setPatientName] = useState('')
   const [patientPhone, setPatientPhone] = useState('')
+  // When a request names no procedure, we ask the patient to pick one BEFORE
+  // showing slots — so they never book a 30-min slot expecting a longer one.
+  const [needProcedure, setNeedProcedure] = useState(false)
   // Booking phase machine: RESULTS (cards + calendar) → REVIEW (a slot picked,
   // not yet booked) → BOOKED (confirmed). Nothing is booked until they confirm.
   const [pendingBooking, setPendingBooking] = useState<CandidateSlot | null>(null)
@@ -82,6 +86,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
         setProviders(s.providers)
         setAppointments(s.appointments)
         setRules(s.rules)
+        setAppointmentTypes(s.appointmentTypes)
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [])
@@ -97,7 +102,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     PROV_COLORS[Math.max(0, providers.findIndex((p) => p.id === id)) % PROV_COLORS.length]
   const slotKey = (s: ScoredSlot) => `${s.slot.providerId}@${s.slot.start}`
 
-  async function findAppointments() {
+  async function findAppointments(typeOverride?: string) {
     setLoading(true)
     setError(null)
     setResult(null)
@@ -107,18 +112,33 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     setDaySlots({})
     setSelectableDays(null)
     setCallbackDone(false)
+    setNeedProcedure(false)
     try {
       // Send the patient bar too — if this escalates to a callback, the server
-      // uses it as the contact to call back.
-      const res = await postSchedule(request.trim(), TODAY, mode, {
-        name: patientName.trim() || undefined,
-        phone: patientPhone.trim() || undefined,
-      })
+      // uses it as the contact to call back. typeOverride is the procedure the
+      // patient picked when their request didn't name one.
+      const res = await postSchedule(
+        request.trim(),
+        TODAY,
+        mode,
+        { name: patientName.trim() || undefined, phone: patientPhone.trim() || undefined },
+        typeOverride,
+      )
       setResult(res)
       // If the patient stated their name/phone in the request, pre-fill the
       // booking form; otherwise leave it for them to type.
       if (res.intent.patientName) setPatientName(res.intent.patientName)
       if (res.intent.patientPhone) setPatientPhone(res.intent.patientPhone)
+
+      // Procedure prompt: a normal booking request that named NO procedure type
+      // would otherwise quietly default to a 30-min visit — which a patient who
+      // mentally wants a filling could mis-read. Ask them to pick first, then
+      // re-run with the right duration. (Skipped for emergencies, cancels, and
+      // when they already picked one.)
+      if (!typeOverride && res.intent.action === 'book' && res.escalation.level === 'none' && !res.intent.appointmentType) {
+        setNeedProcedure(true)
+        return
+      }
       // A callback needs a number to be actionable. We've captured one if it was
       // stated in the request or already in the bar; otherwise prompt for it.
       if (res.escalation.callbackRequired) {
@@ -137,6 +157,13 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  // The patient picked a procedure for an otherwise type-less request — re-run
+  // the search with it so the slots have the correct duration.
+  function chooseProcedure(type: string) {
+    setNeedProcedure(false)
+    void findAppointments(type)
   }
 
   // Attach the patient's contact info to the queued callback (when an emergency
@@ -380,7 +407,7 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
         <div className="request-actions">
           <button
             className="btn btn--primary"
-            onClick={findAppointments}
+            onClick={() => findAppointments()}
             disabled={loading || !request.trim()}
           >
             {loading ? 'Finding…' : '🔍 Find appointments'}
@@ -430,7 +457,9 @@ export function Intake({ mode }: { mode: ExtractionMode }) {
             <>
           <IntentSummary result={result} providerName={providerName} />
 
-          {result.intent.action !== 'book' && result.patientMatch ? (
+          {needProcedure ? (
+            <ProcedurePicker types={appointmentTypes} onPick={chooseProcedure} />
+          ) : result.intent.action !== 'book' && result.patientMatch ? (
             <ManageAppointments
               action={result.intent.action}
               patientMatch={result.patientMatch}
@@ -539,6 +568,39 @@ function addDaysStr(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`)
   d.setDate(d.getDate() + days)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Shown when a request named no procedure. The patient picks what the visit is
+ * for BEFORE seeing slots, so the offered times carry the right duration (a
+ * filling reserves 60 minutes, not 30) — no one books a slot that's too short.
+ */
+function ProcedurePicker({
+  types,
+  onPick,
+}: {
+  types: { type: string; durationMin: number }[]
+  onPick: (type: string) => void
+}) {
+  return (
+    <section className="results procedure-picker">
+      <div className="results-head">
+        <h3>🦷 What’s this visit for?</h3>
+        <span className="banner-inline">
+          Pick the procedure so we reserve the right amount of time.
+        </span>
+      </div>
+      <div className="procedure-grid">
+        {types.map((t) => (
+          <button key={t.type} className="procedure-card" onClick={() => onPick(t.type)}>
+            <span className="procedure-card__icon" aria-hidden>{typeIcon(t.type)}</span>
+            <span className="procedure-card__name">{t.type}</span>
+            <span className="procedure-card__dur">{t.durationMin} min</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 function IntentSummary({

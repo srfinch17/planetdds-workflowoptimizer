@@ -54,7 +54,7 @@ export class SchedulingAssistant {
 
   async handle(
     rawRequest: string,
-    opts: { refDate?: string; mode?: ExtractionMode } = {},
+    opts: { refDate?: string; mode?: ExtractionMode; appointmentType?: string } = {},
   ): Promise<AssistantResult> {
     const refDate = opts.refDate ?? toIso(new Date()).slice(0, 10);
 
@@ -65,7 +65,14 @@ export class SchedulingAssistant {
 
     // Step 1 — understand the request (await so a sync rule-based or async LLM
     // extractor both work through the same call site).
-    const intent = await this.extractor.extract(rawRequest, { refDate, store: this.store, mode: opts.mode });
+    let intent = await this.extractor.extract(rawRequest, { refDate, store: this.store, mode: opts.mode });
+
+    // Caller-supplied procedure type wins (the patient picked one when their
+    // request didn't name a procedure). Clamp to a type the clinic offers so the
+    // duration/eligibility the reasoning agent enforces stays trustworthy.
+    if (opts.appointmentType && this.store.getAppointmentTypes().some((t) => t.type === opts.appointmentType)) {
+      intent = { ...intent, appointmentType: opts.appointmentType };
+    }
 
     // Cancel / reschedule both work the same way here: identify the patient (by
     // name or phone) and list their upcoming appointments. The ACTION only

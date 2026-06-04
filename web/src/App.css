@@ -1912,6 +1912,66 @@ button.cal-block--hl:hover {
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Procedure legend: maps each icon to its type + duration, so the icons on
+   booked slots and in the booking dropdown are self-explanatory. */
+.type-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-transform: capitalize;
+}
+.type-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.type-legend__icon {
+  font-size: 14px;
+}
+
+/* Patient procedure picker (shown when a request named no procedure type). */
+.procedure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+.procedure-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.05s, background 0.15s;
+}
+.procedure-card:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.procedure-card:active {
+  transform: translateY(1px);
+}
+.procedure-card__icon {
+  font-size: 30px;
+  line-height: 1;
+}
+.procedure-card__name {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.procedure-card__dur {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
 .book-type {
   display: inline-flex;
   align-items: center;

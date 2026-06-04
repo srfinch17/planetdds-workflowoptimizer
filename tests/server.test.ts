@@ -110,6 +110,50 @@ describe("Hono backend API", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it("GET /api/slot-options lists, per open 30-min slot, the procedure types that fit there", async () => {
+    const res = await app.request("/api/slot-options?from=2026-06-04&to=2026-06-04");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    const slots = body.slotsByDay["2026-06-04"];
+    expect(slots.length).toBeGreaterThan(0);
+    for (const s of slots) {
+      expect(Number(s.start.slice(14, 16)) % 30).toBe(0); // 30-min grid starts
+      expect(s.options.length).toBeGreaterThan(0);
+      // A 30-min procedure (cleaning/checkup) fits anywhere a slot is open.
+      expect(s.options.some((o: any) => o.durationMin === 30)).toBe(true);
+      for (const o of s.options) {
+        // Every option carries the room + end time the booking needs, and its
+        // end matches its declared duration.
+        expect(o.operatoryId).toBeTruthy();
+        const mins = (new Date(o.end).getTime() - new Date(s.start).getTime()) / 60000;
+        expect(mins).toBe(o.durationMin);
+      }
+    }
+    // Eligibility holds: an extraction option only ever appears with Dr. Smith
+    // (the only provider with the extraction specialty + an x-ray room).
+    for (const s of slots) {
+      if (s.options.some((o: any) => o.type === "extraction")) {
+        expect(s.providerId).toBe("prov-smith");
+      }
+    }
+  });
+
+  it("POST /api/schedule honors an appointmentType override (patient picked a procedure)", async () => {
+    const res = await app.request("/api/schedule", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      // A request that names NO procedure, with the patient's pick supplied.
+      body: JSON.stringify({ request: "I need an appointment next week", refDate: "2026-05-31", appointmentType: "filling" }),
+    });
+    const body = (await res.json()) as any;
+    expect(body.intent.appointmentType).toBe("filling");
+    const top = body.recommendation.slots[0];
+    if (top) {
+      const mins = (new Date(top.slot.end).getTime() - new Date(top.slot.start).getTime()) / 60000;
+      expect(mins).toBe(60); // booked the full 60-min filling duration, not 30
+    }
+  });
+
   it("GET /api/availability honors a weekday filter (only matching days appear)", async () => {
     const res = await app.request("/api/availability?from=2026-06-01&to=2026-06-12&type=cleaning&days=Thu");
     const body = (await res.json()) as any;

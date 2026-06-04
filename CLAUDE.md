@@ -214,14 +214,24 @@ can't force offline mode. Logs reset: `npm run logs:reset`.
 - Admin can **view and delete rules** (with timestamps + a "superseded" badge) and
   **reset to default** (`POST /api/reset` re-seeds the store and clears logs,
   queues, AND the cost/efficiency metrics — a genuinely clean slate).
-- **Book from the day grid:** the Admin day-detail calendar's open slots are
-  clickable so staff can schedule a patient directly (e.g. while on a callback).
-  A booking-type selector (default cleaning) drives which openings show — via the
-  SAME `/api/availability` + candidate generator, so duration/eligibility/X-ray
-  rooms all hold — and clicking an open slot opens a small `BookSlotDialog`
-  (name + phone) that books through `POST /api/book` (conflict-checked, reuses an
-  existing patient by name/phone). Frontend-only feature; no new endpoint. Design:
+- **Book from the day grid:** the Admin day-detail calendar's open 30-minute
+  slots are clickable so staff can schedule a patient directly (e.g. while on a
+  callback). Clicking opens a small `BookSlotDialog` whose **procedure dropdown
+  lists only the types that actually fit THAT slot** — a 60-min filling appears
+  only when the following slot is free, an extraction only with the right provider
+  + X-ray room — computed by `GET /api/slot-options` (the candidate generator run
+  per type, bucketed by provider+start). The chosen procedure fixes the real
+  duration + room; booking goes through `POST /api/book` (conflict-checked, reuses
+  an existing patient by name/phone). A **procedure legend** (icon · type ·
+  duration) sits above the grid. (This replaced an easy-to-miss global "booking
+  type" selector — the per-slot dropdown keeps the same duration/eligibility
+  safety but makes it obvious.) Design:
   `docs/superpowers/specs/2026-06-02-admin-book-on-calendar-design.md`.
+- **Patient procedure prompt:** when a request names NO procedure type, Intake
+  asks "What's this visit for?" (icon cards with durations) BEFORE showing slots,
+  then re-runs the search with that type (`appointmentType` override on
+  `POST /api/schedule`) — so a patient never books a 30-min slot while expecting a
+  longer procedure. A stated type ("I need a filling") skips the prompt.
 
 ## Data
 - `src/core/data/*.json` are the mock store. `appointments.json` holds ~a year of
